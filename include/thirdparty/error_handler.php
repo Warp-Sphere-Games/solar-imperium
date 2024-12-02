@@ -84,6 +84,11 @@ function MRG_error_handler_list_HTML($title, $listing)
     foreach ($listing as $key => $value) {
         $bgcolor = ($count++ % 2 == 1 ? "#dedede" : "#efefef");
 
+        // Check if $value is an array and convert it to a string
+        if (is_array($value)) {
+            $value = implode(", ", $value); // Join array elements with a comma
+        }
+
         $html .= "<tr><td bgcolor=\"" . $bgcolor . "\"><b>$key</b></td><td width=\"100%\" bgcolor=\"" . $bgcolor . "\">$value</td></tr>\r\n";
     }
 
@@ -155,8 +160,9 @@ function MRG_error_handler($errno, $errstr, $errfile, $errline)
 			$value["args"] = "";
 		}
 
+		// Safely handle the args
 		if (is_array($value["args"])) {
-			$args = serialize($value["args"]);
+			$args = serialize($value["args"]);  // Serialize array if it's an array
 		} else {
 			$args = @implode(",", (array) $value["args"]);
 		}
