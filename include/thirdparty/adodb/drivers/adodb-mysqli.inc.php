@@ -27,30 +27,33 @@ if (! defined("_ADODB_MYSQLI_LAYER")) {
  global $ADODB_EXTENSION; $ADODB_EXTENSION = false;
 
 class ADODB_mysqli extends ADOConnection {
-	var $databaseType = 'mysqli';
-	var $dataProvider = 'native';
-	var $hasInsertID = true;
-	var $hasAffectedRows = true;	
-	var $metaTablesSQL = "SHOW TABLES";	
-	var $metaColumnsSQL = "SHOW COLUMNS FROM `%s`";
-	var $fmtTimeStamp = "'Y-m-d H:i:s'";
-	var $hasLimit = true;
-	var $hasMoveFirst = true;
-	var $hasGenID = true;
-	var $isoDates = true; // accepts dates in ISO format
-	var $sysDate = 'CURDATE()';
-	var $sysTimeStamp = 'NOW()';
-	var $hasTransactions = true;
-	var $forceNewConnect = false;
-	var $poorAffectedRows = true;
-	var $clientFlags = 0;
-	var $substr = "substring";
-	var $port = false;
-	var $socket = false;
-	var $_bindInputArray = false;
-	var $nameQuote = '`';		/// string to use to quote identifiers and names
-	var $optionFlags = array(array(MYSQLI_READ_DEFAULT_GROUP,0));
-  var $arrayClass = 'ADORecordSet_array_mysqli';
+    var $databaseType = 'mysqli';
+    var $dataProvider = 'native';
+    var $hasInsertID = true;
+    var $hasAffectedRows = true;    
+    var $metaTablesSQL = "SHOW TABLES";    
+    var $metaColumnsSQL = "SHOW COLUMNS FROM `%s`";
+    var $fmtTimeStamp = "'Y-m-d H:i:s'";
+    var $hasLimit = true;
+    var $hasMoveFirst = true;
+    var $hasGenID = true;
+    var $isoDates = true; // accepts dates in ISO format
+    var $sysDate = 'CURDATE()';
+    var $sysTimeStamp = 'NOW()';
+    var $hasTransactions = true;
+    var $forceNewConnect = false;
+    var $poorAffectedRows = true;
+    var $clientFlags = 0;
+    var $substr = "substring";
+    var $port = false;
+    var $socket = false;
+    var $_bindInputArray = false;
+    var $nameQuote = '`';        /// string to use to quote identifiers and names
+    var $optionFlags = array(array(MYSQLI_READ_DEFAULT_GROUP, 0));
+    var $arrayClass = 'ADORecordSet_array_mysqli';
+
+    // Declare the $databaseName property explicitly
+    public $databaseName; 
 	
 	function ADODB_mysqli() 
 	{			
