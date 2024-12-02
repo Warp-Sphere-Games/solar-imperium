@@ -50,17 +50,18 @@ class Production
 
 		$query = "UPDATE game".$this->game_id."_tb_production SET ";
 		reset($this->data);
-		while (list($key,$value) = each($this->data))
-		{
-			if ($key == "id") continue;
-			if ($key == "empire") continue;
-			if (is_numeric($key)) continue;
-			if ((is_numeric($value)) && ($key != "logo"))
+		foreach ($this->data as $key => $value) {
+			if ($key == "id" || $key == "empire" || is_numeric($key)) {
+				continue;
+			}
+
+			if (is_numeric($value) && $key != "logo") {
 				$query .= "$key=$value,";
-			else
-				$query .= "$key='".addslashes($value)."',";
-			
+			} else {
+				$query .= "$key='" . addslashes($value) . "',";
+			}
 		}
+
 
 		$query = substr($query,0,strlen($query)-1); // removing remaining ,
 		$query .= " WHERE empire='".$this->data["empire"]."'";

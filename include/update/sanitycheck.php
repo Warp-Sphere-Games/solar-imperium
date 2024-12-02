@@ -16,35 +16,34 @@ function CheckGameSanity_NegativeValues($items,$table)
 
     while(!$rs->EOF) {
         
-        while(list($key,$value) = each($rs->fields)) {
-            if (is_numeric($key)) continue;
-            if ($key == "id") continue;
-            
-            if ($value < 0) {
-  //              echo "\r\n*** Invalid value(".$key.") (negative) fixed***\r\n";
-                $query = "UPDATE ".$table." SET ".$key."=0 WHERE id=".$rs->fields["id"];
-                $DB->Execute($query);
-                if (!$DB) print $DB->ErrorMsg();
-            }
-            
-            if ($key == "effectiveness") {
-                if ($value < 10) {
-    //                echo "\r\n*** Invalid effectiveness (<10) fixed***\r\n";
-                    $query = "UPDATE ".$table." SET ".$key."=10 WHERE id=".$rs->fields["id"];
-                    $DB->Execute($query);
-                    if (!$DB) print $DB->ErrorMsg();
-                }
+        foreach ($rs->fields as $key => $value) {
+			if (is_numeric($key)) continue;
+			if ($key == "id") continue;
 
-                if ($value > 150) {
-      //              echo "\r\n*** Invalid effectiveness (>150) fixed***\r\n";
-                    $query = "UPDATE ".$table." SET ".$key."=150 WHERE id=".$rs->fields["id"];
-                    $DB->Execute($query);
-                    if (!$DB) print $DB->ErrorMsg();
-                }
-            }
-            
-            
-        }
+			if ($value < 0) {
+				// echo "\r\n*** Invalid value(".$key.") (negative) fixed***\r\n";
+				$query = "UPDATE " . $table . " SET " . $key . "=0 WHERE id=" . $rs->fields["id"];
+				$DB->Execute($query);
+				if (!$DB) print $DB->ErrorMsg();
+			}
+
+			if ($key == "effectiveness") {
+				if ($value < 10) {
+					// echo "\r\n*** Invalid effectiveness (<10) fixed***\r\n";
+					$query = "UPDATE " . $table . " SET " . $key . "=10 WHERE id=" . $rs->fields["id"];
+					$DB->Execute($query);
+					if (!$DB) print $DB->ErrorMsg();
+				}
+
+				if ($value > 150) {
+					// echo "\r\n*** Invalid effectiveness (>150) fixed***\r\n";
+					$query = "UPDATE " . $table . " SET " . $key . "=150 WHERE id=" . $rs->fields["id"];
+					$DB->Execute($query);
+					if (!$DB) print $DB->ErrorMsg();
+				}
+			}
+		}
+
         
         $rs->MoveNext();        
     }

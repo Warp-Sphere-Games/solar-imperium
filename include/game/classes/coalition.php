@@ -69,16 +69,18 @@ class Coalition
 
 		$query = "UPDATE game".$this->game_id."_tb_coalition SET ";
 		reset($this->data);
-		while (list($key,$value) = each($this->data))
-		{
-			if ($key == "id") continue;
-			if (is_numeric($key)) continue;
-			if ((is_numeric($value)) && ($key != "logo"))
+		foreach ($this->data as $key => $value) {
+			if ($key === "id" || is_numeric($key)) {
+				continue;
+			}
+
+			if (is_numeric($value) && $key !== "logo") {
 				$query .= "$key=$value,";
-			else
-				$query .= "$key='".addslashes($value)."',";
-			
+			} else {
+				$query .= "$key='" . addslashes($value) . "',";
+			}
 		}
+
 
 		$query = substr($query,0,strlen($query)-1); // removing remaining ,
 		$query .= " WHERE id='".$this->data["id"]."'";

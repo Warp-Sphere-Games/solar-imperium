@@ -184,68 +184,74 @@ if (isset($_GET["invasion"])) {
 	// Assault (Rounds)
 	$fields = array("SPACE","ORBITAL","GROUND");
 
-	for ($z=0;$z<count($fields);$z++) {
+	for ($z = 0; $z < count($fields); $z++) {
 		$rounds = array();
 		$max_defense = 0;
 		$max_attack = 0;
-	
-		for ($j=0;$j<count($invasion_data["total_strength"][$fields[$z]]);$j++) {
+
+		for ($j = 0; $j < count($invasion_data["total_strength"][$fields[$z]]); $j++) {
 			$data = $invasion_data["total_strength"][$fields[$z]][$j];
 			$round = array();
-			$round["round"] = $j+1;
+			$round["round"] = $j + 1;
 
 			$max_value = 0;
-			while(list($key,$value) = each($data["attack"])) {
+
+			// Replace while(list...) for "attack"
+			foreach ($data["attack"] as $key => $value) {
 				if ($value > $max_value) $max_value = $value;
 			}
 
-			while(list($key,$value) = each($data["defense"])) {
+			// Replace while(list...) for "defense"
+			foreach ($data["defense"] as $key => $value) {
 				if ($value > $max_value) $max_value = $value;
 			}
 
-			reset($data["attack"]);
-			reset($data["defense"]);
-
+			// Reset unnecessary for foreach
 			$round["img_attack"] = "";
 			$count = 0;
 			if ($max_value == 0) $max_value = 1;
-			
-			while(list($key,$value) = each($data["attack"])) {
-				$max =floor((($value/$max_value)*20));
-				for ($k=0;$k<$max;$k++) {
-					$round["img_attack"] .= "<img style=\"border:1px solid darkred;margin:2px\" width=24 height=24 src=\"../images/game/icons/army/".$key."_0.gif\">";
+
+			// Replace while(list...) for "attack" (image generation)
+			foreach ($data["attack"] as $key => $value) {
+				$max = floor((($value / $max_value) * 20));
+				for ($k = 0; $k < $max; $k++) {
+					$round["img_attack"] .= "<img style=\"border:1px solid darkred;margin:2px\" width=24 height=24 src=\"../images/game/icons/army/" . $key . "_0.gif\">";
 					$count++;
 				}
 			}
 
 			if ($count > $max_attack) $max_attack = $count;
 
-			for ($k=0;$k<($max_attack-$count);$k++) 
+			for ($k = 0; $k < ($max_attack - $count); $k++) {
 				$round["img_attack"] .= "<img style=\"border:1px solid darkblue;margin:2px\" width=24 height=24 src=\"../images/game/destroyed.png\">";
+			}
 
 			$round["img_defense"] = "";
 			$count = 0;
-			while(list($key,$value) = each($data["defense"])) {
+
+			// Replace while(list...) for "defense" (image generation)
+			foreach ($data["defense"] as $key => $value) {
 				if ($max_value == 0) $max_value = 1;
 
-				$max =floor((($value/$max_value)*20));
-				for ($k=0;$k<$max;$k++) {
-					$round["img_defense"] .= "<img style=\"border:1px solid darkblue;margin:2px\" width=24 height=24 src=\"../images/game/icons/army/".$key."_0.gif\">";
+				$max = floor((($value / $max_value) * 20));
+				for ($k = 0; $k < $max; $k++) {
+					$round["img_defense"] .= "<img style=\"border:1px solid darkblue;margin:2px\" width=24 height=24 src=\"../images/game/icons/army/" . $key . "_0.gif\">";
 					$count++;
 				}
 			}
 
 			if ($count > $max_defense) $max_defense = $count;
 
-			for ($k=0;$k<($max_defense-$count);$k++) 
+			for ($k = 0; $k < ($max_defense - $count); $k++) {
 				$round["img_defense"] .= "<img style=\"border:1px solid darkblue;margin:2px\" width=24 height=24 src=\"../images/game/destroyed.png\">";
-
+			}
 
 			$rounds[] = $round;
 		}
 
-		$GAME["template"]->setLoop(strtolower($fields[$z])."_rounds",$rounds);
+		$GAME["template"]->setLoop(strtolower($fields[$z]) . "_rounds", $rounds);
 	}
+
 
 	// after attack
 	$army_attack = array();

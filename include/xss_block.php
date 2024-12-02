@@ -2,89 +2,79 @@
 
 
 // Security check against XSS exploits
-while(list($key,$value) = each($_POST)) {
-   if (strpos($key,"<") !== false) die("Invalid information!");
-   if (strpos($key,">") !== false) die("Invalid information!");
-   if (strpos($key,"%") !== false) die("Invalid information!");
-   if (strpos($key,"'") !== false) die("Invalid information!");
-   if (strpos($key,"\"") !== false) die("Invalid information!");
+foreach ($_POST as $key => $value) {
+    // Check for invalid characters in the key
+    if (strpos($key, "<") !== false || strpos($key, ">") !== false || strpos($key, "%") !== false || strpos($key, "'") !== false || strpos($key, "\"") !== false) {
+        die("Invalid information!");
+    }
 
-   $tainted = false;
-   if (strpos(strtolower($value),"<") !== false) {
-       $value = str_replace("<","_",$value);
-       $tainted = true;
-   }
+    $tainted = false;
 
-   if (strpos($value,"&#") !== false) {
-       $value = str_replace("&#","_",$value);
-       $tainted = true;
+    // Check for "<" in the value
+    if (strpos(strtolower($value), "<") !== false) {
+        $value = str_replace("<", "_", $value);
+        $tainted = true;
+    }
 
-   }
+    // Check for HTML character references
+    if (strpos($value, "&#") !== false) {
+        $value = str_replace("&#", "_", $value);
+        $tainted = true;
+    }
 
+    // Check for "%" in the value
+    if (strpos($value, "%") !== false) {
+        $value = str_replace("%", "_", $value);
+        $tainted = true;
+    }
 
-   if (strpos($value,"%") !== false) {
-       $value = str_replace("%","_",$value);
-       $tainted = true;
-
-   }
-
-   if ($tainted) {
-       $_POST[$key] = $value;
-   }
-
+    // Update $_POST if necessary
+    if ($tainted) {
+        $_POST[$key] = $value;
+    }
 }
+
 
 // repeat for GET variables
 
-while(list($key,$value) = each($_GET)) {
-   if (strpos($key,"<") !== false) die("Invalid information!");
-   if (strpos($key,">") !== false) die("Invalid information!");
-   if (strpos($key,"%") !== false) die("Invalid information!");
-   if (strpos($key,"'") !== false) die("Invalid information!");
-   if (strpos($key,"\"") !== false) die("Invalid information!");
+foreach ($_GET as $key => $value) {
+    // Check for invalid characters in the key
+    if (strpos($key, "<") !== false || strpos($key, ">") !== false || strpos($key, "%") !== false || strpos($key, "'") !== false || strpos($key, "\"") !== false) {
+        die("Invalid information!");
+    }
 
-   $tainted = false;
-   if (strpos(strtolower($value),"<script") !== false) {
-		die("Invalid information");
-   }
+    $tainted = false;
+    
+    // Check for malicious scripts in the value
+    if (strpos(strtolower($value), "<script") !== false) {
+        die("Invalid information");
+    }
 
-   if (strpos(strtolower($value),"onload") !== false) die("Invalid information");
-   if (strpos(strtolower($value),"onmouseover") !== false) die("Invalid information");
-   if (strpos(strtolower($value),"onchange") !== false) die("Invalid information");
-   if (strpos(strtolower($value),"onclick") !== false) die("Invalid information");
-   if (strpos(strtolower($value),"ondblclick") !== false) die("Invalid information");
-   if (strpos(strtolower($value),"onabort") !== false) die("Invalid information");
-   if (strpos(strtolower($value),"ondragdrop") !== false) die("Invalid information");
-   if (strpos(strtolower($value),"onerror") !== false) die("Invalid information");
-   if (strpos(strtolower($value),"onfocus") !== false) die("Invalid information");
-   if (strpos(strtolower($value),"onkeydown") !== false) die("Invalid information");
-   if (strpos(strtolower($value),"onkeypress") !== false) die("Invalid information");
-   if (strpos(strtolower($value),"onmouseout") !== false) die("Invalid information");
-   if (strpos(strtolower($value),"onreset") !== false) die("Invalid information");
-   if (strpos(strtolower($value),"onresize") !== false) die("Invalid information");
-   if (strpos(strtolower($value),"onselect") !== false) die("Invalid information");
-   if (strpos(strtolower($value),"onsubmit") !== false) die("Invalid information");
-   if (strpos(strtolower($value),"onunload") !== false) die("Invalid information");
+    // Check for event handlers or other potentially harmful content
+    $dangerous_events = ["onload", "onmouseover", "onchange", "onclick", "ondblclick", "onabort", "ondragdrop", "onerror", "onfocus", "onkeydown", "onkeypress", "onmouseout", "onreset", "onresize", "onselect", "onsubmit", "onunload"];
+    foreach ($dangerous_events as $event) {
+        if (strpos(strtolower($value), $event) !== false) {
+            die("Invalid information");
+        }
+    }
 
+    // Handle HTML character references
+    if (strpos($value, "&#") !== false) {
+        $value = str_replace("&#", "_", $value);
+        $tainted = true;
+    }
 
+    // Handle percent encoding
+    if (strpos($value, "%") !== false) {
+        $value = str_replace("%", "_", $value);
+        $tainted = true;
+    }
 
-   if (strpos($value,"&#") !== false) {
-       $value = str_replace("&#","_",$value);
-       $tainted = true;
-
-   }
-
-
-   if (strpos($value,"%") !== false) {
-       $value = str_replace("%","_",$value);
-       $tainted = true;
-
-   }
-
-   if ($tainted) {
-       $_GET[$key] = $value;
-   }
-
+    // Update the $_GET superglobal if necessary
+    if ($tainted) {
+        $_GET[$key] = $value;
+    }
 }
+
 
 ?>

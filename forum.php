@@ -49,15 +49,19 @@ if (isset($_GET["BACK"])) {
 
 
 if (isset($_GET["forum"])) {
+    $found = false;
+    foreach ($FORUMS as $key => $value) {
+        if ($key == $_GET["forum"]) {
+            $found = true;
+            break;
+        }
+    }
 
-	reset($FORUMS);
-	$found = false;
-	while(list($key,$value) = each($FORUMS)) {
-		if ($key == $_GET["forum"]) { $found = true; break; }
-	}
-
-	if ($found) $_SESSION["current_forum"] = addslashes($_GET["forum"]);
+    if ($found) {
+        $_SESSION["current_forum"] = addslashes($_GET["forum"]);
+    }
 }
+
 
 
 
@@ -136,60 +140,53 @@ if ($_SESSION["player"]["admin"]==1) {
 
 // Show the main page (Select a forum)
 if (!isset($_SESSION["current_forum"])) {
+    $items = array();
 
-	reset($FORUMS);
-	$items = array();
-	
-	$count = 0;	
-	while(list($key,$value) = each($FORUMS))
-	{
-		$item = array();
-		$item["bgcolor"] =  ($count++ % 2 == 0?"#cacada":"#dadaea");
-		$item["fgcolor"] =  ($count % 2 == 0?"#000000":"#333333");
-		$item["url"] = "forum.php?forum=".$key;
-		$item["description"] = $value["description"];
-		$rs = $DB->Execute("SELECT COUNT(*) FROM system_tb_forum WHERE parent=-1 AND forum_name='".addslashes($key)."'");
-		$item["posts"] = $rs->fields[0];
-		$rs = $DB->Execute("SELECT COUNT(*) FROM system_tb_forum WHERE parent > -1 AND forum_name='".addslashes($key)."'");
+    $count = 0;	
+    foreach ($FORUMS as $key => $value) {
+        $item = array();
+        $item["bgcolor"] = ($count++ % 2 == 0 ? "#cacada" : "#dadaea");
+        $item["fgcolor"] = ($count % 2 == 0 ? "#000000" : "#333333");
+        $item["url"] = "forum.php?forum=" . $key;
+        $item["description"] = $value["description"];
+        
+        $rs = $DB->Execute("SELECT COUNT(*) FROM system_tb_forum WHERE parent=-1 AND forum_name='" . addslashes($key) . "'");
+        $item["posts"] = $rs->fields[0];
+        
+        $rs = $DB->Execute("SELECT COUNT(*) FROM system_tb_forum WHERE parent > -1 AND forum_name='" . addslashes($key) . "'");
+        $item["replies"] = $rs->fields[0];
 
-		$item["replies"] = $rs->fields[0];
-		
-		if ($item["posts"] == 0) $item["lastpost"] = "---"; else {
-			$rs = $DB->Execute("SELECT date_creation FROM system_tb_forum WHERE parent=-1 AND forum_name='".addslashes($key)."' ORDER BY date_creation DESC");
-			if (!$rs) trigger_error($DB->ErrorMsg());
-			
-			$days = floor((time() - $rs->fields["date_creation"]) / (60*60*24));
-			
-			if ($days == 0) 
-				$item["lastpost"] = T_("Today");
-			else
-				$item["lastpost"] = $days . T_(" days");
-		}
-		
-		if ($item["replies"] == 0) $item["lastreply"] = "---"; else {
-			$rs = $DB->Execute("SELECT date_creation FROM system_tb_forum WHERE parent > -1 AND forum_name='".addslashes($key)."' ORDER BY date_creation DESC");
-			if (!$rs) trigger_error($DB->ErrorMsg());
-			
-			$days = floor((time() - $rs->fields["date_creation"]) / (60*60*24));
-			
-			if ($days == 0) 
-				$item["lastreply"] = T_("Today");
-			else
-				$item["lastreply"] = $days . T_(" days");
-		}
-		
-		
+        if ($item["posts"] == 0) {
+            $item["lastpost"] = "---";
+        } else {
+            $rs = $DB->Execute("SELECT date_creation FROM system_tb_forum WHERE parent=-1 AND forum_name='" . addslashes($key) . "' ORDER BY date_creation DESC");
+            if (!$rs) trigger_error($DB->ErrorMsg());
+            
+            $days = floor((time() - $rs->fields["date_creation"]) / (60 * 60 * 24));
+            
+            $item["lastpost"] = $days == 0 ? T_("Today") : $days . T_(" days");
+        }
 
-		$items[] = $item;		
-	}	
+        if ($item["replies"] == 0) {
+            $item["lastreply"] = "---";
+        } else {
+            $rs = $DB->Execute("SELECT date_creation FROM system_tb_forum WHERE parent > -1 AND forum_name='" . addslashes($key) . "' ORDER BY date_creation DESC");
+            if (!$rs) trigger_error($DB->ErrorMsg());
+            
+            $days = floor((time() - $rs->fields["date_creation"]) / (60 * 60 * 24));
+            
+            $item["lastreply"] = $days == 0 ? T_("Today") : $days . T_(" days");
+        }
 
-	
-	$TPL->assign("items",$items);
-		
-	$DB->CompleteTrans();
-	$TPL->display("page_forum.html");
-	die();
+        $items[] = $item;		
+    }	
+
+    $TPL->assign("items", $items);
+    $DB->CompleteTrans();
+    $TPL->display("page_forum.html");
+    die();
 }
+
 
 
 // Display selected forum
@@ -261,15 +258,14 @@ $forum_items = array();
 $offset = ($_SESSION["forum_page"]*CONF_FORUM_POSTS_PER_PAGE);
 $count = 0;
 
-while (list($key,$value) = each($tmp))
-{
-	if (($count >= $offset) && ($count < ($offset+CONF_FORUM_POSTS_PER_PAGE)))
-	{
-		$forum_items[] = $value;
-	}
-	
-	$count++;
+foreach ($tmp as $key => $value) {
+    if (($count >= $offset) && ($count < ($offset + CONF_FORUM_POSTS_PER_PAGE))) {
+        $forum_items[] = $value;
+    }
+
+    $count++;
 }
+
 unset($tmp);
 
 $TPL->assign("items",$forum_items);
