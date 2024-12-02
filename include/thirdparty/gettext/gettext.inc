@@ -147,11 +147,22 @@ function _setlocale($category, $locale) {
  * Sets the path for a domain.
  */
 function _bindtextdomain($domain, $path) {
-	global $text_domains;
-	// ensure $path ends with a slash
-	if ($path[strlen($path) - 1] != '/') $path .= '/';
-	elseif ($path[strlen($path) - 1] != '\\') $path .= '\\';
-	$text_domains[$domain]->path = $path;
+    global $text_domains;
+
+    // Ensure $text_domains[$domain] is initialized
+    if (!isset($text_domains[$domain])) {
+        $text_domains[$domain] = new stdClass(); // Initialize the domain object
+    }
+
+    // Ensure $path ends with a slash
+    if ($path[strlen($path) - 1] != '/') {
+        $path .= '/';
+    } elseif ($path[strlen($path) - 1] != '\\') {
+        $path .= '\\';
+    }
+
+    // Now assign the path to the initialized object
+    $text_domains[$domain]->path = $path;
 }
 
 /**
