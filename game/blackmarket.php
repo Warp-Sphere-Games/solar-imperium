@@ -97,7 +97,7 @@ if (isset($_GET["buy_teleport"])) {
     $GAME["empire"]->data["population"] = floor($GAME["empire"]->data["population"]/2);
 
 
-    srand(time(NULL));
+    srand(time());
     do {
         $x = -950+rand(0,1900);
         $y = -950+rand(0,1900);

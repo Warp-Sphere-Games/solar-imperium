@@ -19,7 +19,7 @@ $GAME["template"]->setVar("info_empire_id",$rs->fields["id"]);
 $GAME["template"]->setVar("gender",$rs->fields["gender"]=="M"?T_("Emperor"):T_("Emperess"));
 if ($rs->fields["last_turn_date"] != 0) {
 	
-$time = time(NULL)-$rs->fields["last_turn_date"];
+$time = time()-$rs->fields["last_turn_date"];
 
 
 $lastturn_days = floor($time / (60*60*24));

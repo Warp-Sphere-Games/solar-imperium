@@ -99,7 +99,7 @@ class Diplomacy {
 		"VALUES('" . $empire_data["id"] . "'," .
 		"'".$target_data["id"] . "'," .
 		"'".addslashes($treaty) . "'," .
-		"'".time(NULL) . "','" . CONF_TREATY_ACCEPT_PENDING . "');";
+		"'".time() . "','" . CONF_TREATY_ACCEPT_PENDING . "');";
 
 		if (!$this->DB->Execute($query)) trigger_error($this->DB->ErrorMsg());
 

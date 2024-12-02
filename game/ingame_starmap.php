@@ -77,7 +77,7 @@ if (isset($_SESSION["empire_id"])) {
 }
 
 
-$time_now = time(NULL);
+$time_now = time();
 
 $rs = $DB->Execute("SELECT * FROM game".$game_id."_tb_armyconvoy");
 while(!$rs->EOF) {

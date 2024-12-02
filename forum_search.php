@@ -32,7 +32,7 @@ while(!$rs->EOF) {
 
 	$item["url"] = "forum_viewtopic.php?topic=".$topic_id;
 	$item["title"] = str_replace("\\'","'",$rs->fields["title"]);
-	$item["date"] = (floor((time(NULL) - $rs->fields["date_creation"])/(60*60*24))+1).T_(" days");
+	$item["date"] = (floor((time() - $rs->fields["date_creation"])/(60*60*24))+1).T_(" days");
 	$rs2 = $DB->Execute("SELECT * FROM system_tb_players WHERE id=".$rs->fields["player"]);
 	$item["author"] = $rs2->fields["nickname"];
 	if ($rs->fields["forum_name"] == "") $item["forum"] = "---"; else

@@ -145,7 +145,7 @@ class System {
 		$this->DB->Execute("INSERT INTO game".$this->game_id."_tb_coordinator (lottery_cash) VALUES(0)");
 
 		$query = "UPDATE game".$this->game_id."_tb_coordinator SET
-			date='" . time(NULL) . "',game_status='0',
+			date='" . time() . "',game_status='0',
 			lottery_cash='0',
 			lottery_date='0'
 			";

@@ -118,7 +118,7 @@ if (isset($_SESSION["game"])) {
 
         require_once($path_prefix."include/update/victory_condition.php");
 
-        $cron_now = time(NULL);
+        $cron_now = time();
         $cron_timeslice = floor((60 * 60 * 24) / $cron_turns_per_day);
         $cron_elapsed1 = $cron_now - $rs->fields["last_turns_update"];
         $cron_elapsed2 = $cron_now - $rs->fields["last_time_update"];
@@ -258,18 +258,18 @@ if (isset($_SESSION["game"])) {
 $DB->StartTrans();
 
 // do basic cleanup //
-$expiration = time(NULL) - CONF_SESSION_CHAT_TIMEOUT;
+$expiration = time() - CONF_SESSION_CHAT_TIMEOUT;
 $rs = $DB->Execute("SELECT * FROM system_tb_chat_sessions WHERE timestamp < $expiration");
 while(!$rs->EOF)
 {
     $rs2 = $DB->Execute("SELECT last_login_date FROM system_tb_players WHERE nickname='".addslashes($rs->fields["nickname"])."'");
     $elapsed = 0;
     if(!$rs2->EOF) {
-        $elapsed = time(NULL) - $rs2->fields["last_login_date"];
+        $elapsed = time() - $rs2->fields["last_login_date"];
         $elapsed = round($elapsed / 60,2);
     }
 
-//    $DB->Execute("INSERT INTO system_tb_chat_log (timestamp,message) VALUES(".time(NULL).",'<b style=\"color:yellow\">[".date("H:i:s")."] ".$rs->fields["nickname"]." ".T_("has left the chatroom. [timeout] (Stayed for")." ".$elapsed." ".T_("minutes").")</b>')");
+//    $DB->Execute("INSERT INTO system_tb_chat_log (timestamp,message) VALUES(".time().",'<b style=\"color:yellow\">[".date("H:i:s")."] ".$rs->fields["nickname"]." ".T_("has left the chatroom. [timeout] (Stayed for")." ".$elapsed." ".T_("minutes").")</b>')");
 
     $DB->Execute("DELETE FROM system_tb_chat_sessions WHERE id=".addslashes($rs->fields["id"]));
     $rs->MoveNext();
@@ -289,9 +289,9 @@ $DB->Execute("DELETE FROM system_tb_chat_sessions WHERE timestamp < ".$expiratio
 if ((isset($_SESSION["player"])) && (isset($_SESSION["player"]["id"]))) {
     $rs = $DB->Execute("SELECT * FROM system_tb_sessions WHERE player=".$_SESSION["player"]["id"]);
     if ($rs->EOF) {
-        $DB->Execute("INSERT INTO system_tb_sessions (player,date) VALUES(".$_SESSION["player"]["id"].",".time(NULL).")");
+        $DB->Execute("INSERT INTO system_tb_sessions (player,date) VALUES(".$_SESSION["player"]["id"].",".time().")");
     } else {
-        $DB->Execute("UPDATE system_tb_sessions SET date=".time(NULL)." WHERE player=".$_SESSION["player"]["id"]);
+        $DB->Execute("UPDATE system_tb_sessions SET date=".time()." WHERE player=".$_SESSION["player"]["id"]);
     }
 
     $TPL->assign("user_is_admin",$_SESSION["player"]["admin"]);
@@ -330,7 +330,7 @@ $online_chatters = $rs->fields[0];
 $rs = $DB->Execute("SELECT id FROM system_tb_games");
 if (!$rs) trigger_error($DB->ErrorMsg());
 
-$timeout_date = time(NULL) - (60*5);
+$timeout_date = time() - (60*5);
 
 while(!$rs->EOF) {
     $DB->Execute("DELETE FROM game".$rs->fields["id"]."_tb_session WHERE lastdate <= $timeout_date");

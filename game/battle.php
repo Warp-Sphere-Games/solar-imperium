@@ -8,7 +8,7 @@ define("LANGUAGE_DOMAIN","game");
 require_once ("../include/game/init.php");
 require_once ("../include/game/init_ingame.php");
 
-$time_now = time(NULL);
+$time_now = time();
 
 
 if (isset ($_GET["retreat"])) {
@@ -18,15 +18,15 @@ if (isset ($_GET["retreat"])) {
 	if (!$rs->EOF) {
 
 		$time_total = ($rs->fields["time_end"] - $rs->fields["time_start"]);
-		$time_remaining = ($rs->fields["time_end"] - time(NULL));
-		$time_elapsed = time(NULL) - $rs->fields["time_start"];
+		$time_remaining = ($rs->fields["time_end"] - time());
+		$time_elapsed = time() - $rs->fields["time_start"];
 		$time_percent = round(($time_elapsed /  $time_total) * 100);
 
 		$convoy_type = CONF_CONVOY_INVASION_RETREAT;
 		if ($rs->fields["convoy_type"] == CONF_CONVOY_DEFENSE)
 			$convoy_type = CONF_CONVOY_DEFENSE_RETREAT;
 
-		$new_time_start = time(NULL);
+		$new_time_start = time();
 		$new_time_end = $new_time_start + $time_elapsed;
 
 		$query = "UPDATE game".$game_id."_tb_armyconvoy SET convoy_type=$convoy_type,time_start=$new_time_start,time_end=$new_time_end WHERE id=" . $id;

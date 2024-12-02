@@ -85,7 +85,7 @@ if (isset($_GET["takeloan"]))
 		$GAME["empire"]->data["credits"] += $credits;
 		$GAME["empire"]->save();
 		
-		$query = "INSERT INTO game".$game_id."_tb_loan (empire,initial_credits,current_credits,total_turns,turns_left,rate,date) VALUES(".$_SESSION["empire_id"].",$credits,$credits,$turns,$turns,$loan_rate,".time(NULL).");";
+		$query = "INSERT INTO game".$game_id."_tb_loan (empire,initial_credits,current_credits,total_turns,turns_left,rate,date) VALUES(".$_SESSION["empire_id"].",$credits,$credits,$turns,$turns,$loan_rate,".time().");";
 		$DB->Execute($query);
 		
 		$notice = T_("{credits} loaned at a rate of {percent} percent(s)");
@@ -118,7 +118,7 @@ if (isset($_GET["takebond"]))
 		$GAME["empire"]->data["credits"] -= $credits;
 		$GAME["empire"]->save();
 		
-		$query = "INSERT INTO game".$game_id."_tb_bond (empire,initial_credits,current_credits,total_turns,turns_left,rate,date) VALUES(".$_SESSION["empire_id"].",$credits,$credits,$turns,$turns,$bond_rate,".time(NULL).");";
+		$query = "INSERT INTO game".$game_id."_tb_bond (empire,initial_credits,current_credits,total_turns,turns_left,rate,date) VALUES(".$_SESSION["empire_id"].",$credits,$credits,$turns,$turns,$bond_rate,".time().");";
 		$DB->Execute($query);
 		
 		$notice = T_("{credits} invested at a rate of {percent} percent(s) for {turns} turn(s)");

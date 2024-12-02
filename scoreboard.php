@@ -29,8 +29,8 @@ $TPL->assign("hall_of_fame",$fames);
 
 	$rs->fields["rank"] = $count;
 	$rs->fields["name"] = stripslashes($rs->fields["nickname"]);
-	$lifespan = ceil((time(NULL) - $rs->fields["creation_date"])/(60*60*24));
-	$rs->fields["lastvisit"] = floor((time(NULL) - $rs->fields["last_login_date"])/(60*60*24)).T_(" Day(s)");
+	$lifespan = ceil((time() - $rs->fields["creation_date"])/(60*60*24));
+	$rs->fields["lastvisit"] = floor((time() - $rs->fields["last_login_date"])/(60*60*24)).T_(" Day(s)");
 	$rs->fields["lifespan"] = $lifespan.T_(" Day(s)");
 	if ($rs->fields["premium"] == 1) $rs->fields["name"] = "<b style=\"color:blue\">".$rs->fields["name"]." *PREMIUM*</b>";
  	$scores[] = $rs->fields;
