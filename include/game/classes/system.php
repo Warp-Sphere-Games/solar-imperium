@@ -44,11 +44,13 @@ class System {
 			$url = $path . "?";
                         $url2 = "";
 			reset($args);
-			while (list ($key, $value) = each($args)) {
-                            if ($key == 'WARNING') $warning = base64_encode($value);
-                            if ($key == 'NOTICE') $warning = base64_encode($value);
+			foreach ($args as $key => $value) {
+				if ($key === 'WARNING' || $key === 'NOTICE') {
+					$warning = base64_encode($value);
+				}
 				$url .= $key . "=" . urlencode($value) . "&";
 			}
+
                         //$url .= base64_encode($url2);
 		}
 

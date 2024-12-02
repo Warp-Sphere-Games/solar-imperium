@@ -215,15 +215,18 @@ function NewTurn_handlePirateRaid($game_id, $empire)
 		
 		/* Update pirate data */
 		$query = "UPDATE game".$game_id."_tb_pirate SET ";
-		while(list($key,$value) = each($pirate)) {
-				if ($key == "id") continue;
-			if (is_numeric($key)) continue;
-			if ((is_numeric($value)) && ($key != "logo"))
+		foreach ($pirate as $key => $value) {
+			if ($key === "id" || is_numeric($key)) {
+				continue;
+			}
+
+			if (is_numeric($value) && $key !== "logo") {
 				$query .= "$key=$value,";
-			else
+			} else {
 				$query .= "$key='$value',";
-			
+			}
 		}
+
 		$query = substr($query,0,strlen($query)-1); // removing remaining ,
 		$query .= " WHERE id='".$pirate["id"]."'";
 		$DB->Execute($query);

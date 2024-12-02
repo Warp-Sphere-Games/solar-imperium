@@ -246,27 +246,29 @@ class ADODB_ado extends ADOConnection {
 			$oCmd->CommandText = $sql;
 			$oCmd->CommandType = 1;
 
-			while(list(, $val) = each($inputarr)) {
+			foreach ($inputarr as $val) {
 				$type = gettype($val);
-				$len=strlen($val);
-				if ($type == 'boolean')
-					$this->adoParameterType = 11;
-				else if ($type == 'integer')
-					$this->adoParameterType = 3;
-				else if ($type == 'double')
-					$this->adoParameterType = 5;
-				elseif ($type == 'string')
-					$this->adoParameterType = 202;
-				else if (($val === null) || (!defined($val)))
-					$len=1;
-				else
-					$this->adoParameterType = 130;
+				$len = strlen($val);
 				
-				// name, type, direction 1 = input, len,
-        		$p = $oCmd->CreateParameter('name',$this->adoParameterType,1,$len,$val);
+				if ($type == 'boolean') {
+					$this->adoParameterType = 11;
+				} else if ($type == 'integer') {
+					$this->adoParameterType = 3;
+				} else if ($type == 'double') {
+					$this->adoParameterType = 5;
+				} else if ($type == 'string') {
+					$this->adoParameterType = 202;
+				} else if (($val === null) || (!defined($val))) {
+					$len = 1;
+				} else {
+					$this->adoParameterType = 130;
+				}
 
+				// name, type, direction 1 = input, len,
+				$p = $oCmd->CreateParameter('name', $this->adoParameterType, 1, $len, $val);
 				$oCmd->Parameters->Append($p);
 			}
+
 			
 			$p = false;
 			$rs = $oCmd->Execute();

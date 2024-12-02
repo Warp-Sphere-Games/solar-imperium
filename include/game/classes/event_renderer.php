@@ -105,8 +105,10 @@ class EventRenderer
 				if ($params["won"]==false) $params["won"] = T_("Invasion failed!");
 					else $params["won"] = T_("Invasion won!");
 
-				while(list($key,$value) = each($params))
-					$this->TEMPLATE->assign($key,$value);
+				foreach ($params as $key => $value) {
+					$this->TEMPLATE->assign($key, $value);
+				}
+
 				
 			break;
 
@@ -119,8 +121,10 @@ class EventRenderer
 				$tpl_filename = "event/eliminated.html";
 				$params = unserialize($event_data["params"]);
 
-				while(list($key,$value) = each($params))
-					$this->TEMPLATE->assign($key,$value);
+				foreach ($params as $key => $value) {
+					$this->TEMPLATE->assign($key, $value);
+				}
+
 			break;
 
 
@@ -133,8 +137,10 @@ class EventRenderer
 				$params = unserialize($event_data["params"]);
 				if ($params["won"]==false) $params["won"] = T_("Assault failed!");
 					else $params["won"] = T_("Assault won!");
-				while(list($key,$value) = each($params))
-					$this->TEMPLATE->assign($key,$value);
+				foreach ($params as $key => $value) {
+					$this->TEMPLATE->assign($key, $value);
+				}
+
 			break;
 			
 
@@ -255,8 +261,10 @@ class EventRenderer
 			
 				$tpl_filename = "event/new_turn.html";
 				$params = unserialize($event_data["params"]);
-				while(list($key,$value) = each($params))
-					$this->TEMPLATE->assign($key,$value);
+				foreach ($params as $key => $value) {
+					$this->TEMPLATE->assign($key, $value);
+				}
+		
 			break;
 			
 			/**********************  TURN COMPLETED ! *********************************/
@@ -264,8 +272,10 @@ class EventRenderer
 			
 				$tpl_filename = "event/turn_completed.html";
 				$params = unserialize($event_data["params"]);
-				while(list($key,$value) = each($params))
-					$this->TEMPLATE->assign($key,$value);
+				foreach ($params as $key => $value) {
+					$this->TEMPLATE->assign($key, $value);
+				}
+
 			break;
 			
 			/**********************  INCOMING_INVASION ! *********************************/
@@ -325,8 +335,10 @@ class EventRenderer
 				$filter = "WARFARE";
 				$tpl_filename = "event/pirateraid.html";
 				$params = unserialize($event_data["params"]);
-				while(list($key,$value) = each($params))
-					$this->TEMPLATE->assign($key,$value);
+				foreach ($params as $key => $value) {
+					$this->TEMPLATE->assign($key, $value);
+				}
+
 			
 			break;
 			
@@ -334,8 +346,10 @@ class EventRenderer
 			case CONF_EVENT_RESEARCHDONE:
 				$tpl_filename = "event/researchdone.html";
 				$params = unserialize($event_data["params"]);
-				while(list($key,$value) = each($params))
-					$this->TEMPLATE->assign($key,$value);
+				foreach ($params as $key => $value) {
+					$this->TEMPLATE->assign($key, $value);
+				}
+
 		
 			break;
 
@@ -345,8 +359,9 @@ class EventRenderer
 				$params = unserialize($event_data["params"]);
 				if ($params["growrate"] > 0) $params["grow_color"] = "lightgreen"; else $params["grow_color"] = "#FFAAAA";
 
-				while(list($key,$value) = each($params))
-					$this->TEMPLATE->assign($key,$value);
+				foreach ($params as $key => $value) {
+					$this->TEMPLATE->assign($key, $value);
+				}
 					
 			break;
 			
@@ -356,8 +371,10 @@ class EventRenderer
 				$params = unserialize($event_data["params"]);
 				if ($params["growrate"] > 0) $params["grow_color"] = "lightgreen"; else $params["grow_color"] = "#FFAAAA";
 
-				while(list($key,$value) = each($params))
-					$this->TEMPLATE->assign($key,$value);
+				foreach ($params as $key => $value) {
+					$this->TEMPLATE->assign($key, $value);
+				}
+
 					
 			break;
 
@@ -367,8 +384,10 @@ class EventRenderer
 				$params = unserialize($event_data["params"]);
 				if ($params["growrate"] > 0) $params["grow_color"] = "lightgreen"; else $params["grow_color"] = "#FFAAAA";
 
-				while(list($key,$value) = each($params))
-					$this->TEMPLATE->assign($key,$value);
+				foreach ($params as $key => $value) {
+					$this->TEMPLATE->assign($key, $value);
+				}
+
 					
 			break;
 
@@ -379,8 +398,10 @@ class EventRenderer
 				$params = unserialize($event_data["params"]);
 				if ($params["growrate"] > 0) $params["grow_color"] = "lightgreen"; else $params["grow_color"] = "#FFAAAA";
 
-				while(list($key,$value) = each($params))
-					$this->TEMPLATE->assign($key,$value);
+				foreach ($params as $key => $value) {
+					$this->TEMPLATE->assign($key, $value);
+				}
+
 		
 			break;
 
@@ -389,8 +410,10 @@ class EventRenderer
 				$tpl_filename = "event/fundamental_research.html";
 				$params = unserialize($event_data["params"]);
 
-				while(list($key,$value) = each($params))
-					$this->TEMPLATE->assign($key,$value);
+				foreach ($params as $key => $value) {
+					$this->TEMPLATE->assign($key, $value);
+				}
+
 		
 			break;
 
@@ -398,8 +421,10 @@ class EventRenderer
 			case CONF_EVENT_MILITARYPRODUCTION:
 				$tpl_filename = "event/military_production.html";
 				$params = unserialize($event_data["params"]);
-				while(list($key,$value) = each($params))
-					$this->TEMPLATE->assign($key,$value);
+				foreach ($params as $key => $value) {
+					$this->TEMPLATE->assign($key, $value);
+				}
+
 					
 			break;
 	
@@ -408,8 +433,10 @@ class EventRenderer
 				$tpl_filename = "event/notice.html";
 				$params = unserialize($event_data["params"]);
 
-				while(list($key,$value) = each($params))
-					$this->TEMPLATE->assign($key,$value);
+				foreach ($params as $key => $value) {
+					$this->TEMPLATE->assign($key, $value);
+				}
+
 					
 			break;
 			
@@ -419,8 +446,10 @@ class EventRenderer
 				$tpl_filename = "event/populationgrowth.html";
 				$params = unserialize($event_data["params"]);
 				if ($params["growrate"] > 0) $params["grow_color"] = "lightgreen"; else $params["grow_color"] = "#FFAAAA";
-				while(list($key,$value) = each($params))
-					$this->TEMPLATE->assign($key,$value);
+				foreach ($params as $key => $value) {
+					$this->TEMPLATE->assign($key, $value);
+				}
+
 					
 			break;
 
@@ -462,8 +491,10 @@ class EventRenderer
 			case CONF_EVENT_RANDOMEVENT:
 				$tpl_filename = "event/randomevent.html";
 				$params = unserialize($event_data["params"]);
-				while(list($key,$value) = each($params))
-					$this->TEMPLATE->assign($key,$value);
+				foreach ($params as $key => $value) {
+					$this->TEMPLATE->assign($key, $value);
+				}
+
 					
 			break;
 			
@@ -471,8 +502,10 @@ class EventRenderer
 			case CONF_EVENT_CIVILSTATUS:
 				$tpl_filename = "event/civilstatus.html";
 				$params = unserialize($event_data["params"]);
-				while(list($key,$value) = each($params))
-					$this->TEMPLATE->assign($key,$value);
+				foreach ($params as $key => $value) {
+					$this->TEMPLATE->assign($key, $value);
+				}
+
 					
 			break;
 			
@@ -501,18 +534,26 @@ class EventRenderer
 
 				$params = unserialize($event_data["params"]);
 				$tpl_filename = "event/tradeconvoy_received.html";
-				while(list($key,$value) = each($params)) {
-					if (is_numeric($key)) continue;
-					
-					if (($key == "empire_to") || ($key == "empire_from")) {
-						$rs = $this->DB->Execute("SELECT * FROM game".$this->game_id."_tb_empire WHERE id='".intval($value)."'");
-						if (!$rs) trigger_error($this->DB->ErrorMsg());
-						$value = $this->GAME_TPL->displayEmpireHTML($rs->fields["id"],$rs->fields["emperor"],$rs->fields["name"],$empire_data["networth"]);
+				foreach ($params as $key => $value) {
+					if (is_numeric($key)) {
+						continue;
+					}
+
+					if ($key === "empire_to" || $key === "empire_from") {
+						$rs = $this->DB->Execute("SELECT * FROM game" . $this->game_id . "_tb_empire WHERE id='" . intval($value) . "'");
+						if (!$rs) {
+							trigger_error($this->DB->ErrorMsg());
+						}
+						$value = $this->GAME_TPL->displayEmpireHTML($rs->fields["id"], $rs->fields["emperor"], $rs->fields["name"], $empire_data["networth"]);
+					}
+
+					if (is_numeric($value)) {
+						$value = $this->GAME_TPL->formatNumber($value);
 					}
 					
-					if (is_numeric($value)) $value = $this->GAME_TPL->formatNumber($value);
-					$this->TEMPLATE->assign($key,$value);
+					$this->TEMPLATE->assign($key, $value);
 				}
+
 					
 				if (($event_data["sticky"]==0) && ($event_data["seen"]==0)) {
 					if (!$this->DB->Execute("UPDATE game".$this->game_id."_tb_event SET seen='1' WHERE id='".$event_data["id"]."'")) trigger_error($this->DB->ErrorMsg());
@@ -572,8 +613,10 @@ class EventRenderer
 				$filter = "WARFARE";
 				$tpl_filename = "event/pirate_ambush.html";
 				$params = unserialize($event_data["params"]);
-				while(list($key,$value) = each($params))
-					$this->TEMPLATE->assign($key,$this->GAME_TPL->formatNumber($value));
+				foreach ($params as $key => $value) {
+					$this->TEMPLATE->assign($key, $this->GAME_TPL->formatNumber($value));
+				}
+
 			break;
 
 
