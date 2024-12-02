@@ -53,7 +53,7 @@ if (isset($_POST["nuke_empire"])) {
 	}
 	
 	
-	srand(time(NULL));
+	srand(time());
 
 
 	// do you get caught ?

@@ -153,7 +153,7 @@ while (!$rs->EOF)
 	}	
 
   	if (file_exists("../images/game/empires/$game_id/".$rs->fields["id"].".jpg"))
-  		$rs->fields["img_logo"] = "../images/game/empires/$game_id/".$rs->fields["id"].".jpg?=".time(NULL);
+  		$rs->fields["img_logo"] = "../images/game/empires/$game_id/".$rs->fields["id"].".jpg?=".time();
   	else
   		$rs->fields["img_logo"] = "img_logo.php?empire=".$rs->fields["id"]; 
    

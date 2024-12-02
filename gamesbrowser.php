@@ -25,7 +25,7 @@ while(!$rs->EOF) {
 		$game["time_elapsed"] = T_("Need a reset!");
 	else {		
 		
-		$elapsed = (time(NULL) - $rs3->fields["date"]);
+		$elapsed = (time() - $rs3->fields["date"]);
 		$game["time_elapsed"] = (floor($elapsed/(60*60*24))+1)." ".T_("days");
 		$game["lifetime"] .= " ".T_("days");
 		if ($rs3->fields["game_status"] == 1) {
@@ -35,7 +35,7 @@ while(!$rs->EOF) {
 			$game["winner"] = $rs4->fields["player_name"];
 		}
 
-		$game["restart_date"] = $rs3->fields["restart_date"] - time(NULL);
+		$game["restart_date"] = $rs3->fields["restart_date"] - time();
 		
 	}
 	

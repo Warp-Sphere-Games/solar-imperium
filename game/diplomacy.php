@@ -70,7 +70,7 @@ if (isset($_GET["coalition_yes"]))
 	
 	$query = "INSERT INTO game".$game_id."_tb_member (date,empire,coalition,level)
 	VALUES(
-	'".time(NULL)."',
+	'".time()."',
 	'".$GAME["empire"]->data["id"]."',
 	'".$rs->fields["id"]."',
 	'0'
@@ -86,7 +86,7 @@ if (isset($_GET["coalition_yes"]))
 		$DB->Execute("DELETE FROM game".$game_id."_tb_treaty WHERE empire_from='".$GAME["empire"]->data["id"]."' AND empire_to='".$rs2->fields["empire"]."'");	
 		$DB->Execute("DELETE FROM game".$game_id."_tb_treaty WHERE empire_to='".$GAME["empire"]->data["id"]."' AND empire_from='".$rs2->fields["empire"]."'");	
 		
-		$DB->Execute("INSERT INTO game".$game_id."_tb_treaty (empire_from,empire_to,type,date,status) VALUES('".$GAME["empire"]->data["id"]."','".$rs2->fields["empire"]."','2','".time(NULL)."','".CONF_TREATY_ACCEPTED."')");
+		$DB->Execute("INSERT INTO game".$game_id."_tb_treaty (empire_from,empire_to,type,date,status) VALUES('".$GAME["empire"]->data["id"]."','".$rs2->fields["empire"]."','2','".time()."','".CONF_TREATY_ACCEPTED."')");
 		$rs2->MoveNext();
 		
 	}
@@ -381,7 +381,7 @@ for ($i=0;$i<count($GAME["empire"]->diplomacy->data);$i++)
 	$item["bgcolor"] =  ($i % 2 == 0?"#666666":"#777777");
 	$item["background"] =  ($i % 2 == 0?"images/background2.jpg":"images/background3.jpg");
 
-	$item["date"] =  $GAME["template"]->formatTime(time(NULL) - $GAME["empire"]->diplomacy->data[$i]["date"]);
+	$item["date"] =  $GAME["template"]->formatTime(time() - $GAME["empire"]->diplomacy->data[$i]["date"]);
 	$item["status"] = T_("Unknown");
 	if ($GAME["empire"]->diplomacy->data[$i]["status"] == CONF_TREATY_ACCEPT_PENDING) $item["status"] = T_("Accept pending");
 	if ($GAME["empire"]->diplomacy->data[$i]["status"] == CONF_TREATY_ACCEPTED) $item["status"] = T_("Accepted");
@@ -453,7 +453,7 @@ else
 		$item["bgcolor"] =  ($i % 2 == 0?"#666666":"#777777");
 		$item["background"] =  ($i % 2 == 0?"images/background2.jpg":"images/background3.jpg");
 
-		$item["date"] = $GAME["template"]->formatTime(time(NULL) - $all_members[$i]["date"]);
+		$item["date"] = $GAME["template"]->formatTime(time() - $all_members[$i]["date"]);
 		$item["status"] = T_("Member");
 		if ($all_members[$i]["level"] == 1) $item["status"] = T_("Owner");
 		$item["id"] = $all_members[$i]["id"];

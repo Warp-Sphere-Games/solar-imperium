@@ -6,7 +6,7 @@ function NewTurn_handlePirateRaid($game_id, $empire)
 {
 	global $DB,$GAME;
 
-	srand(time(NULL));
+	srand(time());
 	$malus = 0;
 	
 	if ($empire->data["protection_turns_left"] > 0)

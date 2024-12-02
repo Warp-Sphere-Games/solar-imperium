@@ -47,7 +47,7 @@ function PerformCovertOperation($game_id,$empire_id,$operation, $empire)
     if ($success_rate > 80)	$difficulty = T_("Safe!");
 
     $result = T_("Success rate") . ": " . $difficulty . "<br/>\n";
-    srand(time(NULL));
+    srand(time());
     $percent = rand(1, 100);
     if ($success_rate > $percent) {
 
@@ -377,7 +377,7 @@ function PerformCovertOperation($game_id,$empire_id,$operation, $empire)
 
                 $SMARTY->assign("effectiveness", (rand(0, 4) > $empire->army->data["covertagents_level"] ? "???" : $enemy_empire->army->data["effectiveness"]));
 
-                srand(time(NULL));
+                srand(time());
 
                 for ($i = 0; $i < count($CONF_PLANETS); $i++) {
 

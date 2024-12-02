@@ -98,7 +98,7 @@ $GAME["template"]->setVar("emperor_short",$GAME["empire"]->data["emperor"]);
 // time /turns related 
 $day = 60*60*24;
 $timeslice = floor($day/CONF_TURNS_PER_DAY);
-$elapsed = time(NULL) - $GAME["template"]->coord["last_turns_update"];
+$elapsed = time() - $GAME["template"]->coord["last_turns_update"];
 		
 $GAME["template"]->setVar("creation_date",$GAME["empire"]->data["date"]);
 $GAME["template"]->setVar("networth",$GAME["empire"]->data["networth"]);

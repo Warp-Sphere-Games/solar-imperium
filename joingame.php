@@ -105,8 +105,8 @@ if ((isset($_GET["JOINNOW"])) && isset($_POST["empire_name"])) {
 	'$default_logo',
 	'".$autobio."',
 	1,
-	".time(NULL).",
-	".time(NULL).",
+	".time().",
+	".time().",
 	".$game_data["turns_per_day"].",
 	".$game_data["protection_turns"].",
 	".CONF_START_CREDITS.",
@@ -172,14 +172,14 @@ if ((isset($_GET["JOINNOW"])) && isset($_POST["empire_name"])) {
 	while(!$recipients->EOF)
 	{
 		$query = "INSERT INTO game".$game_id."_tb_event (event_type,event_from,event_to,params,seen,sticky,date,height) ".
-		"VALUES(".$evt_type.",".$evt_from.",".$recipients->fields["id"].",'".addslashes(serialize($evt_params))."',".$evt_seen.",".$evt_sticky.",".time(NULL).",".$evt_height.")";	
+		"VALUES(".$evt_type.",".$evt_from.",".$recipients->fields["id"].",'".addslashes(serialize($evt_params))."',".$evt_seen.",".$evt_sticky.",".time().",".$evt_height.")";	
 		if (!$DB->Execute($query)) trigger_error($DB->ErrorMsg());
 		$recipients->MoveNext();
 	}
 		
 	// garbage collection
-	$timeout_unseen = time(NULL) - CONF_UNSEEN_EVENT_TIMEOUT;
-	$timeout_seen = time(NULL) - CONF_SEEN_EVENT_TIMEOUT;
+	$timeout_unseen = time() - CONF_UNSEEN_EVENT_TIMEOUT;
+	$timeout_seen = time() - CONF_SEEN_EVENT_TIMEOUT;
 
 	if (!$DB->Execute("DELETE FROM game".$game_id."_tb_event WHERE date < $timeout_unseen AND seen=0")) trigger_error($this->DB->ErrorMsg());
 	if (!$DB->Execute("DELETE FROM game".$game_id."_tb_event WHERE date < $timeout_seen AND seen=1")) trigger_error($this->DB->ErrorMsg());

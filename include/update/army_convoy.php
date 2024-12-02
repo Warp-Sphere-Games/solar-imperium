@@ -4,7 +4,7 @@
 function HandleArmyConvoys($game_id)
 {
 	global $DB,$TPL;
-	$time_now = time(NULL);
+	$time_now = time();
 
 	
 	$rs = $DB->Execute("SELECT * FROM game".$game_id."_tb_armyconvoy");

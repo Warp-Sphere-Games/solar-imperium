@@ -235,8 +235,8 @@ if (isset ($_GET["ADDAI"])) {
 	'$default_logo',
 	'".$autobio."',
 	1,
-	".time(NULL).",
-	".time(NULL).",
+	".time().",
+	".time().",
 	".($game_data["turns_per_day"]*4).",
 	".$game_data["protection_turns"].",
 	".CONF_START_CREDITS.",
@@ -302,14 +302,14 @@ if (isset ($_GET["ADDAI"])) {
 	while(!$recipients->EOF)
 	{
 		$query = "INSERT INTO game".$game_id."_tb_event (event_type,event_from,event_to,params,seen,sticky,date,height) ".
-		"VALUES(".$evt_type.",".$evt_from.",".$recipients->fields["id"].",'".addslashes(serialize($evt_params))."',".$evt_seen.",".$evt_sticky.",".time(NULL).",".$evt_height.")";
+		"VALUES(".$evt_type.",".$evt_from.",".$recipients->fields["id"].",'".addslashes(serialize($evt_params))."',".$evt_seen.",".$evt_sticky.",".time().",".$evt_height.")";
 		if (!$DB->Execute($query)) trigger_error($DB->ErrorMsg());
 		$recipients->MoveNext();
 	}
 
 	// garbage collection
-	$timeout_unseen = time(NULL) - CONF_UNSEEN_EVENT_TIMEOUT;
-	$timeout_seen = time(NULL) - CONF_SEEN_EVENT_TIMEOUT;
+	$timeout_unseen = time() - CONF_UNSEEN_EVENT_TIMEOUT;
+	$timeout_seen = time() - CONF_SEEN_EVENT_TIMEOUT;
 
 	if (!$DB->Execute("DELETE FROM game".$game_id."_tb_event WHERE date < $timeout_unseen AND seen=0")) trigger_error($this->DB->ErrorMsg());
 	if (!$DB->Execute("DELETE FROM game".$game_id."_tb_event WHERE date < $timeout_seen AND seen=1")) trigger_error($this->DB->ErrorMsg());
@@ -410,7 +410,7 @@ if (isset ($_GET["RESETGAME"])) {
 	if (!$DB) trigger_error($DB->ErrorMsg());
 	
 	$query = "UPDATE game".$game_id."_tb_coordinator SET
-		date=" . time(NULL) . ",game_status=0,
+		date=" . time() . ",game_status=0,
 		lottery_cash=0,
 		lottery_date=0
 	";
@@ -624,7 +624,7 @@ while (!$rs->EOF) {
 	if ($rs3->EOF)
 		$game["time_elapsed"] = T_("Need a reset!");
 	else {
-		$elapsed = (time(NULL) - $rs3->fields["date"]);
+		$elapsed = (time() - $rs3->fields["date"]);
 		$game["time_elapsed"] = (floor($elapsed / (60 * 60 * 24)) + 1) . " ".T_("days");
 	}
 
@@ -636,7 +636,7 @@ while (!$rs->EOF) {
 	while(!$rs4->EOF) {
 		$empire = $rs4->fields;
 		$empire["rank"] = $rank++;
-		$empire["lifespan"] = formatTime(time(NULL) - $empire["date"]);
+		$empire["lifespan"] = formatTime(time() - $empire["date"]);
 		$empires[] = $empire;
 		$rs4->MoveNext();
 	}

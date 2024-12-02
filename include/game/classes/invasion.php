@@ -22,7 +22,7 @@ class Invasion {
 	///////////////////////////////////////////////////////////////////////
 	function Invasion($DB, $convoy) {
 		$this->DB = $DB;
-		$time_now = time(NULL);
+		$time_now = time();
 
 		$this->game_id = round($_SESSION["game"]);
 		$this->convoy = $convoy;
@@ -50,7 +50,7 @@ class Invasion {
 		}
 		
 
-		srand(time(NULL));
+		srand(time());
 	}
 
 	///////////////////////////////////////////////////////////////////////
@@ -63,7 +63,7 @@ class Invasion {
 		if ($this->target == NULL) return;
 		if ($this->convoy == NULL) return;
 		
-		$time_now = time(NULL);
+		$time_now = time();
 		
 		/////////////////////////////////////////////////////////////
 		// Step 1: Build invasion force
@@ -942,7 +942,7 @@ class Invasion {
 		//if ($this->game_id == 4) die("This is our game!");
 
 		$strength = $this->total_strength["SPACE"][0];
-		$time_now = time(NULL);
+		$time_now = time();
 		
 		if ($ground == true) {
 			// invasion worked

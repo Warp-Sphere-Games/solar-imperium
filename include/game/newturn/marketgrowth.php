@@ -8,7 +8,7 @@ function NewTurn_handleMarketGrowth($game_id, $empire)
 	
 	$rs = $DB->Execute("SELECT * FROM game".$game_id."_tb_market");
 	
-	$market_update = time(NULL) - $rs->fields["last_update"];
+	$market_update = time() - $rs->fields["last_update"];
 	if ($market_update > CONF_MARKET_UPDATE_DELAY)
 	{
 
@@ -50,7 +50,7 @@ function NewTurn_handleMarketGrowth($game_id, $empire)
 		"food_ratio=$food_ratio,".
 		"ore_ratio=$ore_ratio,".
 		"petroleum_ratio=$petroleum_ratio,".
-		"last_update=".time(NULL);
+		"last_update=".time();
 		
 		$DB->Execute($query);
 		
