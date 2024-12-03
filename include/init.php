@@ -15,11 +15,15 @@ require_once($path_prefix."include/config.php");
 require_once($path_prefix."include/thirdparty/smarty/Smarty.class.php");
 require_once($path_prefix."include/thirdparty/adodb/adodb.inc.php");
 
-if (isset($_POST["magickey"])) {
+session_start();
+var_dump($_SESSION);
+echo "Session ID: " . session_id();
+
+/* if (isset($_POST["magickey"])) {
     if (!session_start($_POST["magickey"])) die("Unable to create session object!");
 } else {
     if (!session_start()) die("Unable to create session object!");
-}
+} */
 
 require_once($path_prefix."include/languages.php");
 
@@ -85,6 +89,10 @@ if (ini_get("register_globals")==1)
 $DB = NewADOConnection(CONF_DATABASE_DRIVER);
 if (!@$DB->Connect(CONF_DATABASE_HOSTNAME,CONF_DATABASE_USERNAME,CONF_DATABASE_PASSWORD,CONF_DATABASE_NAME))
     die("Database is currently offline, come back in few minutes. Thank you.");
+
+if (!$DB->IsConnected()) {
+    die("Database connection failed: " . $DB->ErrorMsg());
+}
 
 require_once($path_prefix."include/thirdparty/error_handler.php");
 
@@ -321,9 +329,20 @@ if ((isset($_SESSION["player"])) && (isset($_SESSION["player"]["id"]))) {
 }
 
 $rs = $DB->Execute("SELECT COUNT(*) FROM system_tb_sessions");
-$online_players = $rs->fields[0];
+if ($rs && !$rs->EOF) {
+    $online_players = $rs->fields[0];
+} else {
+    // Handle the error, e.g., set default value or log the error
+    $online_players = 0;  // Default value in case of error
+}
+
 $rs = $DB->Execute("SELECT COUNT(*) FROM system_tb_chat_sessions");
-$online_chatters = $rs->fields[0];
+if ($rs && !$rs->EOF) {
+    $online_chatters = $rs->fields[0];
+} else {
+    // Handle the error, e.g., set default value or log the error
+    $online_chatters = 0;  // Default value in case of error
+}
 
 
 // cleanup timed out games sessions
@@ -440,4 +459,4 @@ if (isset($_SESSION["player"])) {
         }
 
 
-        ?>
+?>

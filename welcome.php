@@ -2,8 +2,8 @@
 // Solar Imperium is licensed under GPL2, Check LICENSE.TXT for mode details //
 define("LANGUAGE_DOMAIN","system");
 
-
 require_once("include/init.php");
+
 
 // ******************************************************************************
 //  Logout callback
@@ -132,8 +132,14 @@ if (isset($_GET["LOGIN"])) {
 // Display statistics
 
 $rs = $DB->Execute("SELECT COUNT(*) FROM system_tb_games");
-$available_games = $rs->fields[0];
-$TPL->assign("available_games",$available_games);
+if ($rs && !$rs->EOF) {
+    $available_games = $rs->fields[0];
+} else {
+    // Handle the error, e.g., set a default value or log the error
+    $available_games = 0;  // Default value if the query fails or the result is empty
+}
+
+$TPL->assign("available_games", $available_games);
 
 $timeNow = mktime(0,0,1, date("n"), date("j"), date("Y"));
 
@@ -177,21 +183,46 @@ $TPL->assign("empires_count",$empires_count);
 $TPL->assign("new_empires_today",$new_empires_today);
 
 $rs = $DB->Execute("SELECT COUNT(*) FROM system_tb_players");
-$players_registered = $rs->fields[0];
-$TPL->assign("players_registered",$players_registered);
+if ($rs && !$rs->EOF) {
+    $players_registered = $rs->fields[0];
+} else {
+    // Log the error if the query fails
+    error_log("Query failed: " . $DB->ErrorMsg());  // Log the error message
+    $players_registered = 0;  // Default value if the query fails
+}
+
+$TPL->assign("players_registered", $players_registered);
 
 
-$date_today = mktime(0,0,1,date("m"),date("d"),date("y"));
-$rs = $DB->Execute("SELECT COUNT(*) FROM system_tb_players WHERE creation_date >= ".$date_today);
-$new_accounts_today = $rs->fields[0];
+$date_today = mktime(0, 0, 1, date("m"), date("d"), date("Y"));  // use date("Y") for the current year
 
-$TPL->assign("new_accounts_today",$new_accounts_today);
+// Ensure $date_today is properly quoted and escaped
+$rs = $DB->Execute("SELECT COUNT(*) FROM system_tb_players WHERE creation_date >= ?", array($date_today));
 
-$rs = $DB->Execute("SELECT COUNT(*) FROM system_tb_players WHERE last_login_date >= ".$date_today);
-$accounts_logged_today = $rs->fields[0];
+if ($rs && !$rs->EOF) {
+    $new_accounts_today = $rs->fields[0];
+} else {
+    // Log the error if the query fails
+    error_log("Query failed: " . $DB->ErrorMsg());  // Log the error message
+    $new_accounts_today = 0;  // Default value if the query fails
+}
 
-$TPL->assign("accounts_logged_today",$accounts_logged_today);
-$TPL->assign("connected_players",$online_players);
+$TPL->assign("new_accounts_today", $new_accounts_today);
+
+
+// Use prepared statement to safely pass $date_today
+$rs = $DB->Execute("SELECT COUNT(*) FROM system_tb_players WHERE last_login_date >= ?", array($date_today));
+
+if ($rs && !$rs->EOF) {
+    $accounts_logged_today = $rs->fields[0];
+} else {
+    // Log the error if the query fails
+    error_log("Query failed: " . $DB->ErrorMsg());  // Log the error message
+    $accounts_logged_today = 0;  // Default value if the query fails
+}
+
+$TPL->assign("accounts_logged_today", $accounts_logged_today);
+
 
 
 

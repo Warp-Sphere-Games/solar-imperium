@@ -817,12 +817,18 @@ class ADORecordSet_mysqli extends ADORecordSet{
 	  $this->ADORecordSet($queryID);	
 	}
 	
-	function _initrs()
-	{
-	global $ADODB_COUNTRECS;
-	
-		$this->_numOfRows = $ADODB_COUNTRECS ? @mysqli_num_rows($this->_queryID) : -1;
-		$this->_numOfFields = @mysqli_num_fields($this->_queryID);
+	function _initrs() {
+		global $ADODB_COUNTRECS;
+		
+		// Check if the result is a valid mysqli_result object
+		if ($this->_queryID instanceof mysqli_result) {
+			$this->_numOfRows = $ADODB_COUNTRECS ? @mysqli_num_rows($this->_queryID) : -1;
+			$this->_numOfFields = @mysqli_num_fields($this->_queryID);
+		} else {
+			// Handle the case where $this->_queryID is not a valid result
+			$this->_numOfRows = 0;  // No rows available
+			$this->_numOfFields = 0; // No fields available
+		}
 	}
 	
 /*
