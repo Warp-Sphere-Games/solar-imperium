@@ -80,14 +80,13 @@ function MRG_error_handler_list_HTML($title,$listing)
 {
 	$html = "<table width=\"100%\"><tr><td colspan=\"2\" style=\"font-size:13px;font-family:verdana;color:darkred\"><b>".$title."</td></tr>\r\n";
 
-	reset($listing);
 	$count = 0;
-	while(list($key,$value) = each($listing))
-	{
-		$bgcolor = ($count++%2==1?"#dedede":"#efefef");
+	foreach ($listing as $key => $value) {
+		$bgcolor = ($count++ % 2 == 1 ? "#dedede" : "#efefef");
 
-		$html .= "<tr><td bgcolor=\"".$bgcolor."\"><b>$key</b></td><td width=\"100%\" bgcolor=\"".$bgcolor."\">$value</td></tr>\r\n";
+		$html .= "<tr><td bgcolor=\"" . $bgcolor . "\"><b>$key</b></td><td width=\"100%\" bgcolor=\"" . $bgcolor . "\">$value</td></tr>\r\n";
 	}
+
 
 	$html .= "</table>\r\n<br/>";
 
@@ -147,21 +146,26 @@ function MRG_error_handler($errno, $errstr, $errfile, $errline)
 	$count = 0;
 
 
-	while (list($key,$value) = each($bt))
-	{
-		if ($count == 0) { $count++; continue; }
-		$bgcolor = ($count++%2==0?"#dedede":"#efefef");
+	foreach ($bt as $key => $value) {
+		if ($count == 0) { 
+			$count++; 
+			continue; 
+		}
+
+		$bgcolor = ($count++ % 2 == 0 ? "#dedede" : "#efefef");
 		if (!isset($value["args"])) $value["args"] = "";
 
-		if (is_array($value["args"])) 
-			$args = serialize($value["args"]);
-		else
-			$args = @implode(",",$value["args"]);
+		if (is_array($value["args"])) {
+			$args = implode(",", $value["args"]);
+		} else {
+			$args = $value["args"];  // Directly assign the string if it's not an array
+		}
 
-		$body .=  "<tr><td bgcolor=\"".$bgcolor."\" style=\"color:#666666;font-size:13px;font-family:verdana\"><i>".$value["file"].":".$value["line"]."</i></td>
-				<td width=\"100%\" bgcolor=\"".$bgcolor."\" style=\"color:black;font-size:13px;font-family:verdana\">".$value["function"]."(<b>".$args."</b>)</td></tr>";
-
+		$body .=  "<tr><td bgcolor=\"" . $bgcolor . "\" style=\"color:#666666;font-size:13px;font-family:verdana\"><i>" . $value["file"] . ":" . $value["line"] . "</i></td>
+					<td width=\"100%\" bgcolor=\"" . $bgcolor . "\" style=\"color:black;font-size:13px;font-family:verdana\">" . $value["function"] . "(<b>" . $args . "</b>)</td></tr>";
 	}
+
+
 
 	$body .= "</table>";
 	$body .= "<br/>";
