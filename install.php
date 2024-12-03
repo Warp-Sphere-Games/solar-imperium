@@ -14,12 +14,34 @@ if ($pos === FALSE) {
  * Remove file
  */
 if (isset($_GET["REMOVE"])) {
+    // Get the absolute path of the current script directory and file
+    $installFile = __DIR__ . "/install.php";  // __DIR__ gives the absolute path of the current directory
+    $installOldFile = __DIR__ . "/install.php_old";
 
-	if (!is_writable("install.php")) die("<b>Unable to rename 'install.php' to 'install.php_old'! Please remove the file manually.</b>");
-	if (!is_writable("."))  die("<b>Unable to rename 'install.php' to 'install.php_old'! Please remove the file manually.</b>");
-	rename("install.php","install.php_old");
-	die(header("Location: index.php"));
+    // Ensure the file exists first
+    if (!file_exists($installFile)) {
+        die("<b>The install.php file does not exist. Please ensure the file is in the correct location.</b>");
+    }
+
+    // Check if the install.php file is writable
+    if (!is_writable($installFile)) {
+        die("<b>Unable to rename 'install.php' to 'install.php_old'! Please ensure the file has the correct permissions, typically 644 or 755.</b>");
+    }
+
+    // Check if the parent directory is writable (this is more for safety than strictly necessary)
+    if (!is_writable(dirname($installFile))) {
+        die("<b>Unable to rename 'install.php' to 'install.php_old'! Please ensure the parent directory is writable.</b>");
+    }
+
+    // Attempt to rename the file
+    if (!rename($installFile, $installOldFile)) {
+        die("<b>Unable to rename 'install.php' to 'install.php_old'. Please rename it manually or check file permissions.</b>");
+    }
+
+    // Redirect after renaming
+    die(header("Location: index.php"));
 }
+
 
 
 require_once("include/thirdparty/adodb/adodb.inc.php");
