@@ -1,1 +1,1 @@
-# Solar imperium
+# Solar Imperium
