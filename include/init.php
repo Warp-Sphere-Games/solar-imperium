@@ -4,55 +4,41 @@
 $path_prefix = "";
 if (defined("CALLED_FROM_GAME_INIT")) $path_prefix = "../";
 
-
-if (!file_exists($path_prefix."include/config.php")) {
-    if (!file_exists($path_prefix."install.php")) die("No server set but installer not available too, reinstall the entire software.");
-    die(header("Location: ".$path_prefix."install.php"));
+if (!file_exists($path_prefix . "include/config.php")) {
+    if (!file_exists($path_prefix . "install.php")) die("No server set but installer not available too, reinstall the entire software.");
+    die(header("Location: " . $path_prefix . "install.php"));
 }
 
-require_once($path_prefix."include/xss_block.php");
-require_once($path_prefix."include/config.php");
-require_once($path_prefix."include/thirdparty/smarty/Smarty.class.php");
-require_once($path_prefix."include/thirdparty/adodb/adodb.inc.php");
+// --- Composer & app bootstrap ---
+$rootDir = realpath($path_prefix !== "" ? $path_prefix : "./");
+$autoload = $rootDir . "/vendor/autoload.php";
+if (!file_exists($autoload)) {
+    die("Missing dependencies. Please deploy the 'vendor' folder or run 'composer install'.");
+}
+require_once $autoload;
 
-if (isset($_POST["magickey"])) {
-    if (!session_start($_POST["magickey"])) die("Unable to create session object!");
-} else {
+require_once($path_prefix . "include/xss_block.php");
+require_once($path_prefix . "include/config.php");
+
+// ADOdb: Composer installs it under vendor/adodb/adodb-php
+// NewADOConnection() is defined by adodb.inc.php (functions are not PSR autoloaded)
+require_once $rootDir . "/vendor/adodb/adodb-php/adodb.inc.php";
+
+
+// Sessions (PHP 8): set a provided session id, then start
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    if (isset($_POST["magickey"]) && is_string($_POST["magickey"]) && $_POST["magickey"] !== '') {
+        @session_id($_POST["magickey"]);
+    }
     if (!session_start()) die("Unable to create session object!");
 }
 
-require_once($path_prefix."include/languages.php");
+require_once($path_prefix . "include/languages.php");
 
-$TPL = new Smarty();
-$TPL->assign("LANGUAGES",$LANGUAGES);
-if (isset($_GET["XML"])) {
-
-    $TPL->template_dir = "templates/xml/system/";
-    $TPL->compile_dir = "templates_c/xml/system/";
-
-} else {
-
-    $TPL->template_dir = "templates/system/";
-    $TPL->compile_dir = "templates_c/system/";
-
-}
-
-
-if (isset($_GET["WARNING"])) $TPL->assign("warning_message",$_GET["WARNING"]);
-
-// basic PHP initialization
-
-function phpnum() {
-    $version = explode('.', phpversion());
-    return (int) $version[0];
-}
-function is_php5() { return phpnum() == 5; }
-function is_php4() { return phpnum() == 4; }
-
-if (is_php5()) {
+// Timezone: set from config regardless of PHP major version
+if (!empty(CONF_TIMEZONE)) {
     date_default_timezone_set(CONF_TIMEZONE);
 }
-
 
 if(!function_exists('make_seed')) {
     function make_seed()
@@ -62,8 +48,6 @@ if(!function_exists('make_seed')) {
     }
 }
 
-
-
 function dieError($content) {
     if (isset($_GET["XML"]))
     die("<xml><Error>$content</Error></xml>");
@@ -71,7 +55,6 @@ function dieError($content) {
 }
 
 srand(make_seed());
-
 
 ob_start();	// output buffering
 
