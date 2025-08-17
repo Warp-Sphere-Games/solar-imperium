@@ -221,7 +221,7 @@ if ($current_page==3) {
 	$output = "";
 	
     // Whitelist driver and validate inputs
-    $allowed_drivers = ['mysqli'];
+    $allowed_drivers = ['mysqli', 'pdo_mysql'];
     if (!in_array($db_driver, $allowed_drivers, true)) die("Unsupported database driver.");
     if (!preg_match('/^[A-Za-z0-9_]+$/', $db_name)) die("Invalid database name.");
     if (!preg_match('#^[A-Za-z0-9._-]+(:\d+)?$#', $db_hostname) && !preg_match('#^/[^\\0]+$#', $db_hostname)) {

@@ -1,84 +1,91 @@
 <html>
-
 <head>
-	<title>Solar Imperium 2.7 Installer (Page 2/4)</title>
+  <title>Solar Imperium 3.0 Installer (Page 2/4)</title>
 </head>
-
 <body style="font-size:14px;font-family:sans-serif" bgcolor="#333344">
-	<br/><br/>
-	<div align="center">
-	<div style="width:600px" align="left">
-		
-	<p style="background-color:#666699;color:white;padding:5px"><b>Solar Imperium 2.7 Installer (Page 2/4) :: File permissions and SQL configuration</b></p>
-	
-	<p style="text-align:justify;background-color:#ccccdd;padding:30px;border:1px solid width">
-		{$output}
- 	</p>
- 	<br/>
- 	<p<b style="color:#cacaca">Database configuration</b></p>
-	<form action="install.php?page=3" method="POST">
-		<table  style="font-size:14px;font-family:sans-serif;background-color:#ccccdd;padding:30px;border:1px solid white" >
-			
-			<tr>
-				<td>Driver:
-				</td>
-				<td>
-					<input type="text" style="background-color:#cacafa;border:1px solid black;padding:2px" name="db_driver" value="mysqlt">
-				</td>
-			</tr>
-			
-			<tr>
-				<td>Hostname:
-				</td>
-				<td>
-					<input type="text" style="background-color:#cacafa;border:1px solid black;padding:2px" name="db_hostname" value="localhost">
-				</td>
-			</tr>
+  <br/><br/>
+  <div align="center">
+    <div style="width:600px" align="left">
 
-			<tr>
-				<td>Database name:
-				</td>
-				<td>
-					<input type="text" style="background-color:#cacafa;border:1px solid black;padding:2px" name="db_name" value="solarimperium">
-				</td>
-			</tr>
+      <p style="background-color:#666699;color:white;padding:5px">
+        <b>Solar Imperium 3.0 Installer (Page 2/4) :: File permissions and SQL configuration</b>
+      </p>
 
-			<tr>
-				<td>Username:
-				</td>
-				<td>
-					<input type="text" style="background-color:#cacafa;border:1px solid black;padding:2px" name="db_username" value="root">
-				</td>
-			</tr>
+      <div style="text-align:justify;background-color:#ccccdd;padding:30px;border:1px solid white">
+        {$output}
+      </div>
 
-			<tr>
-				<td>Password:
-				</td>
-				<td>
-					<input type="password" style="background-color:#cacafa;border:1px solid black;padding:2px" name="db_password1">
-				</td>
-			</tr>
+      <br/>
 
-			<tr>
-				<td>Confirm password:
-				</td>
-				<td>
-					<input type="password" style="background-color:#cacafa;border:1px solid black;padding:2px" name="db_password2">
-				</td>
-			</tr>
+      <p style="color:#cacaca"><b>Database configuration</b></p>
 
-			<tr>
-				<td colspan="2">
-<br/>
-					<input type="submit" value="Continue">
-				</td>
-			</tr>
-		</table>
-	</form>
+      <form action="install.php?page=3" method="POST">
+        <input type="hidden" name="csrf" value="{$csrf}"/>
 
-	</div>
-	</div>
+        <table style="font-size:14px;font-family:sans-serif;background-color:#ccccdd;padding:30px;border:1px solid white">
+          <tr>
+            <td>Driver:</td>
+            <td>
+              <select name="db_driver" style="background-color:#cacafa;border:1px solid black;padding:2px">
+                <option value="mysqli" selected>MariaDB/MySQL (mysqli) — recommended</option>
+                <option value="pdo_mysql">MariaDB/MySQL (PDO)</option>
+                <!-- If you later support other engines + schema, you can add:
+                <option value="pgsql">PostgreSQL (pgsql)</option>
+                <option value="pdo_pgsql">PostgreSQL (PDO)</option>
+                -->
+              </select>
+            </td>
+          </tr>
 
+          <tr>
+            <td>Hostname:</td>
+            <td>
+              <input type="text" name="db_hostname" value="localhost"
+                     style="background-color:#cacafa;border:1px solid black;padding:2px">
+            </td>
+          </tr>
+
+          <tr>
+            <td>Database name:</td>
+            <td>
+              <input type="text" name="db_name" value="solarimperium"
+                     style="background-color:#cacafa;border:1px solid black;padding:2px">
+            </td>
+          </tr>
+
+          <tr>
+            <td>Username:</td>
+            <td>
+              <input type="text" name="db_username" value="si_user"
+                     style="background-color:#cacafa;border:1px solid black;padding:2px">
+            </td>
+          </tr>
+
+          <tr>
+            <td>Password:</td>
+            <td>
+              <input type="password" name="db_password1"
+                     style="background-color:#cacafa;border:1px solid black;padding:2px">
+            </td>
+          </tr>
+
+          <tr>
+            <td>Confirm password:</td>
+            <td>
+              <input type="password" name="db_password2"
+                     style="background-color:#cacafa;border:1px solid black;padding:2px">
+            </td>
+          </tr>
+
+          <tr>
+            <td colspan="2"><br/>
+              <input type="submit" value="Continue">
+            </td>
+          </tr>
+        </table>
+      </form>
+
+    </div>
+  </div>
 </body>
-
 </html>
