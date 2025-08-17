@@ -1,90 +1,68 @@
 <?php
+// PHP 8+ compatible input sanitizer (keeps legacy behavior)
+// NOTE: Prefer validating inputs and escaping on output in new code.
 
+declare(strict_types=1);
 
-// Security check against XSS exploits
-while(list($key,$value) = each($_POST)) {
-   if (strpos($key,"<") !== false) die("Invalid information!");
-   if (strpos($key,">") !== false) die("Invalid information!");
-   if (strpos($key,"%") !== false) die("Invalid information!");
-   if (strpos($key,"'") !== false) die("Invalid information!");
-   if (strpos($key,"\"") !== false) die("Invalid information!");
+/**
+ * Recursively sanitize an input array in-place.
+ * - Dies if a key contains forbidden characters (legacy behavior).
+ * - For POST: replaces "<" with "_" in values; for both: replaces "&#" and "%" with "_".
+ * - For GET: blocks common script/event patterns (legacy behavior).
+ */
+function si_sanitize_input_array(array &$arr, bool $isGet = false): void
+{
+    // Original key checks: die if key contains any of these
+    $forbiddenInKeys = ['<', '>', '%', "'", '"'];
 
-   $tainted = false;
-   if (strpos(strtolower($value),"<") !== false) {
-       $value = str_replace("<","_",$value);
-       $tainted = true;
-   }
+    foreach ($arr as $key => &$value) {
+        // key validation
+        foreach ($forbiddenInKeys as $ch) {
+            if (strpos($key, $ch) !== false) {
+                die("Invalid information!");
+            }
+        }
 
-   if (strpos($value,"&#") !== false) {
-       $value = str_replace("&#","_",$value);
-       $tainted = true;
+        // recurse for nested arrays
+        if (is_array($value)) {
+            si_sanitize_input_array($value, $isGet);
+            continue;
+        }
 
-   }
+        // normalize to string
+        $val = (string)$value;
+        $tainted = false;
 
+        if ($isGet) {
+            $lower = strtolower($val);
+            // legacy GET checks
+            $badNeedles = [
+                '<script','onload','onmouseover','onchange','onclick','ondblclick','onabort','ondragdrop',
+                'onerror','onfocus','onkeydown','onkeypress','onmouseout','onreset','onresize','onselect',
+                'onsubmit','onunload'
+            ];
+            foreach ($badNeedles as $needle) {
+                if (strpos($lower, $needle) !== false) {
+                    die("Invalid information");
+                }
+            }
+        }
 
-   if (strpos($value,"%") !== false) {
-       $value = str_replace("%","_",$value);
-       $tainted = true;
+        // legacy replacements
+        if (strpos($val, '&#') !== false) { $val = str_replace('&#', '_', $val); $tainted = true; }
+        if (strpos($val, '%')  !== false) { $val = str_replace('%',  '_', $val); $tainted = true; }
 
-   }
+        if (!$isGet) { // POST-only legacy behavior: replace "<"
+            if (stripos($val, '<') !== false) { $val = str_ireplace('<', '_', $val); $tainted = true; }
+        }
 
-   if ($tainted) {
-       $_POST[$key] = $value;
-   }
-
+        if ($tainted) {
+            $value = $val; // write back
+        }
+    }
+    unset($value);
 }
 
-// repeat for GET variables
-
-while(list($key,$value) = each($_GET)) {
-   if (strpos($key,"<") !== false) die("Invalid information!");
-   if (strpos($key,">") !== false) die("Invalid information!");
-   if (strpos($key,"%") !== false) die("Invalid information!");
-   if (strpos($key,"'") !== false) die("Invalid information!");
-   if (strpos($key,"\"") !== false) die("Invalid information!");
-
-   $tainted = false;
-   if (strpos(strtolower($value),"<script") !== false) {
-		die("Invalid information");
-   }
-
-   if (strpos(strtolower($value),"onload") !== false) die("Invalid information");
-   if (strpos(strtolower($value),"onmouseover") !== false) die("Invalid information");
-   if (strpos(strtolower($value),"onchange") !== false) die("Invalid information");
-   if (strpos(strtolower($value),"onclick") !== false) die("Invalid information");
-   if (strpos(strtolower($value),"ondblclick") !== false) die("Invalid information");
-   if (strpos(strtolower($value),"onabort") !== false) die("Invalid information");
-   if (strpos(strtolower($value),"ondragdrop") !== false) die("Invalid information");
-   if (strpos(strtolower($value),"onerror") !== false) die("Invalid information");
-   if (strpos(strtolower($value),"onfocus") !== false) die("Invalid information");
-   if (strpos(strtolower($value),"onkeydown") !== false) die("Invalid information");
-   if (strpos(strtolower($value),"onkeypress") !== false) die("Invalid information");
-   if (strpos(strtolower($value),"onmouseout") !== false) die("Invalid information");
-   if (strpos(strtolower($value),"onreset") !== false) die("Invalid information");
-   if (strpos(strtolower($value),"onresize") !== false) die("Invalid information");
-   if (strpos(strtolower($value),"onselect") !== false) die("Invalid information");
-   if (strpos(strtolower($value),"onsubmit") !== false) die("Invalid information");
-   if (strpos(strtolower($value),"onunload") !== false) die("Invalid information");
-
-
-
-   if (strpos($value,"&#") !== false) {
-       $value = str_replace("&#","_",$value);
-       $tainted = true;
-
-   }
-
-
-   if (strpos($value,"%") !== false) {
-       $value = str_replace("%","_",$value);
-       $tainted = true;
-
-   }
-
-   if ($tainted) {
-       $_GET[$key] = $value;
-   }
-
-}
-
-?>
+// Apply to superglobals
+si_sanitize_input_array($_POST, false);
+si_sanitize_input_array($_GET,  true);

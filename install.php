@@ -198,15 +198,16 @@ if ($current_page == 2) {
 /**
  * Page #3
  */
- 
-
 
 if ($current_page==3) {
-	
-	// Verify Session
-	if (empty($_POST['csrf']) || !hash_equals($_SESSION['csrf'], $_POST['csrf'])) {
-        die("Invalid CSRF token.");
+
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        session_start();
     }
+    if (empty($_SESSION['csrf'])) {
+        $_SESSION['csrf'] = bin2hex(random_bytes(16));
+    }
+    $TPL->assign('csrf', $_SESSION['csrf']);
 	
 	if (!isset($_POST["db_driver"])) die("Invalid post data.");
 	
@@ -230,7 +231,7 @@ if ($current_page==3) {
 
 
     $DB = NewADOConnection($db_driver);
-    $DB->setErrorHandling(ADODB_ERROR_EXCEPTION);
+    $DB->raiseErrorFn = 'adodb_throw';
     try {
         $DB->Connect($db_hostname, $db_username, $db_password, "");
     } catch (Throwable $t) {
@@ -280,8 +281,12 @@ if ($current_page==3) {
 }
 
 if ($current_page == 4) {
-	$TPL->display("page".$current_page.".html");
-	die();
+    if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+    if (empty($_POST['csrf']) || !hash_equals($_SESSION['csrf'], $_POST['csrf'])) {
+        die("Invalid CSRF token.");
+    }
+    $TPL->display("page".$current_page.".html");
+    die();
 }
 
 ?>
