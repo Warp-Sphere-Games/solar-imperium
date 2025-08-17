@@ -106,91 +106,95 @@ if ($current_page == 1) {
  * Page 2
  */
 
-
-
 if ($current_page == 2) {
-	
-	// Verify Session
-	if (empty($_SESSION['csrf'])) {
+
+    // Verify Session + expose CSRF for the next form
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        session_start();
+    }
+    if (empty($_SESSION['csrf'])) {
         $_SESSION['csrf'] = bin2hex(random_bytes(16));
     }
     $TPL->assign("csrf", $_SESSION['csrf']);
 
-	$output = "";
+    $output = "";
+    $ok_count = 0;
 
-    $ex = get_loaded_extensions();
-	$ok_count = 0;
-    
-    // Check for required extensions
-    $extensions = array();
-    $extensions[] = "mbstring";
-    $extensions[] = "gd";
-    $extensions[] = "mysqli";
+    // Required PHP extensions
+    $extensions = ["mbstring", "gd", "mysqli"];
+    $loaded = get_loaded_extensions();
 
-    for ($i=0;$i<count($extensions);$i++) {
-
-        if (in_array($extensions[$i], $ex)) {
+    foreach ($extensions as $ext) {
+        if (in_array($ext, $loaded, true)) {
             $ok_count++;
-			$output .= "Extension <b>".$extensions[$i]."</b> :: <b style=color:blue>Found</b><br/>";
+            $output .= "Extension <b>{$ext}</b> :: <b style=color:blue>Found</b><br/>";
         } else {
-            $output .= "Extension <b>".$extensions[$i]."</b> :: <b style=color:red>Missing</b><br/>";
-		}
+            $output .= "Extension <b>{$ext}</b> :: <b style=color:red>Missing</b><br/>";
+        }
     }
 
-    // Checkf ro valid paths
-	$paths = array();
-	$paths[] = "images/game/empires/";
-	$paths[] = "include/game/games_config/";
-	$paths[] = "include/game/games_rules/";
-	$paths[] = "templates_c/";
-	$paths[] = "templates_c/game/";
-	$paths[] = "templates_c/system/";
+    // Build absolute paths under the current docroot (works in Docker)
+    $docroot = rtrim(realpath($_SERVER['DOCUMENT_ROOT'] ?: __DIR__), '/');
+    $paths = [
+        "{$docroot}/images/game/empires/",
+        "{$docroot}/include/game/games_config/",
+        "{$docroot}/include/game/games_rules/",
+        "{$docroot}/templates_c/",
+        "{$docroot}/templates_c/game/",
+        "{$docroot}/templates_c/system/",
+    ];
 
-	// Create Missing Paths
-	foreach ($paths as $p) {
-		// Normalize trailing slash
-		$p = rtrim($p, '/');
+    foreach ($paths as $p) {
+        $p = rtrim($p, '/');
 
-		if (is_dir($p)) {
-			if (is_writable($p)) {
-				$ok_count++;
-				$output .= "Path <b>{$p}/</b> :: <b style=color:blue>Writable</b><br/>";
-			} else {
-				$output .= "Path <b>{$p}/</b> :: <b style=color:red>Not Writable!</b><br/>";
-			}
-			continue;
-		}
+        if (is_dir($p)) {
+            if (is_writable($p)) {
+                $ok_count++;
+                $output .= "Path <b>{$p}/</b> :: <b style=color:blue>Writable</b><br/>";
+            } else {
+                $output .= "Path <b>{$p}/</b> :: <b style=color:red>Not Writable!</b><br/>";
+            }
+            continue;
+        }
 
-		// Ensure parent exists (create recursively if needed)
-		$parent = dirname($p);
-		if (!is_dir($parent)) {
-			if (!mkdir($parent, 0755, true) && !is_dir($parent)) {
-				$output .= "Path <b>{$p}/</b> :: <b style=color:red>Not Found! Unable to create parent directory.</b><br/>";
-				continue;
-			}
-		}
+        $parent = dirname($p);
 
-		// Create target directory
-		if (!mkdir($p, 0755, true) && !is_dir($p)) {
-			$output .= "Path <b>{$p}/</b> :: <b style=color:red>Not Found!</b><br/>";
-		} else {
-			$ok_count++;
-			$output .= "Path <b>{$p}/</b> :: <b style=color:blue>Not Found but created</b><br/>";
-		}
-	}
+        // Try to create parent if missing and its parent is writable
+        if (!is_dir($parent)) {
+            $grand = dirname($parent);
+            if (!is_dir($grand) || !is_writable($grand)) {
+                $output .= "Path <b>{$p}/</b> :: <b style=color:red>Not Found! Parent missing and not creatable.</b><br/>";
+                continue;
+            }
+            if (!mkdir($parent, 0755, true) && !is_dir($parent)) {
+                $output .= "Path <b>{$p}/</b> :: <b style=color:red>Not Found! Unable to create parent directory.</b><br/>";
+                continue;
+            }
+        }
 
-	// Same summary, but fix the typo in 'issues'
-	if ($ok_count != (count($paths) + count($extensions))) {
-		$output .= "<br/><b style=color:red>*** Please fix these issues before continuing ***</b><br/>";
-	}
+        // Ensure parent (now existing) is writable before mkdir
+        if (!is_writable($parent)) {
+            $output .= "Path <b>{$p}/</b> :: <b style=color:red>Parent exists but not writable.</b><br/>";
+            continue;
+        }
 
-	if ($ok_count != (count($paths) + count($extensions))) $output .= "<br/><b style=color:red>*** Please fix theses isssues before continuing ***</b><br/>";
-	
-	$TPL->assign("output",$output);
-	$TPL->display("page".$current_page.".html");
-	die();
+        if (!mkdir($p, 0755, true) && !is_dir($p)) {
+            $output .= "Path <b>{$p}/</b> :: <b style=color:red>Not Found!</b><br/>";
+        } else {
+            $ok_count++;
+            $output .= "Path <b>{$p}/</b> :: <b style=color:blue>Not Found but created</b><br/>";
+        }
+    }
+
+    // Summary
+    if ($ok_count != (count($paths) + count($extensions))) {
+        $output .= "<br/><b style=color:red>*** Please fix these issues before continuing ***</b><br/>";
+    }
+
+    $TPL->assign("output", $output);
+    $TPL->display("page{$current_page}.html");
+    die();
 }
-
 /**
  * Page #3
  */
