@@ -2,7 +2,6 @@
 
 // Solar Imperium is licensed under GPL2, Check LICENSE.TXT for mode details //
 
-
 $pos = strpos($_SERVER["SCRIPT_NAME"],"install.php_old");
 if ($pos === FALSE) {
 	// do nothing
@@ -21,23 +20,33 @@ if (isset($_GET["REMOVE"])) {
 	die(header("Location: index.php"));
 }
 
+$autoload = __DIR__ . '/vendor/autoload.php';
+if (!file_exists($autoload)) {
+    // Friendly message if someone accidentally deploys without vendor/
+    die("Missing dependencies. Please deploy the 'vendor' folder or run 'composer install'.");
+}
+require $autoload;
 
-require_once("include/thirdparty/adodb/adodb.inc.php");
-require_once("include/thirdparty/smarty/Smarty.class.php");
-require_once("include/thirdparty/error_handler.php");
+// Minimal error/exception handler for the installer (no PHP5-era calls)
+set_error_handler(function($severity, $message, $file, $line) {
+    if (!(error_reporting() & $severity)) return;
+    throw new ErrorException($message, 0, $severity, $file, $line);
+});
+set_exception_handler(function($e) {
+    http_response_code(500);
+    echo "<pre>Installer error: " . htmlspecialchars($e->getMessage()) . "\n"
+       . "in " . htmlspecialchars($e->getFile()) . ":" . $e->getLine() . "</pre>";
+});
+
+// Devolopment debug ONLY REMOVE BEFORE RELEASE
+ini_set('display_errors', '1');
+error_reporting(E_ALL);
+
+
 
 // basic PHP initialization
 
-function phpnum() {
-$version = explode('.', phpversion());
-return (int) $version[0];
-}
-function is_php5() { return phpnum() == 5; }
-function is_php4() { return phpnum() == 4; }
-
-if (is_php5()) {
-	 date_default_timezone_set("America/Montreal"); 
-}
+date_default_timezone_set('America/Chicago'); // pick your canonical tz
 
 
 ob_start();	// output buffering
@@ -49,9 +58,32 @@ if (ini_get("register_globals")==1)
 	die("Disable register_globals PHP Directive!");
 }
 
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
+
+$docroot = rtrim(realpath($_SERVER['DOCUMENT_ROOT'] ?: __DIR__), '/');
+
 $TPL = new Smarty;
-$TPL->template_dir = "templates/installer/";
-$TPL->compile_dir = "templates_c/installer/";
+$TPL->template_dir = $docroot . '/templates/installer/';
+$TPL->compile_dir  = $docroot . '/templates_c/installer/';
+$TPL->use_sub_dirs = false;
+
+if (!is_dir($TPL->compile_dir)) {
+    if (!mkdir($TPL->compile_dir, 0755, true) && !is_dir($TPL->compile_dir)) {
+        die("Unable to create Smarty compile directory: {$TPL->compile_dir}");
+    }
+}
+if (!is_writable($TPL->compile_dir)) {
+    die("Smarty compile directory is not writable: {$TPL->compile_dir}");
+}
+
+// optional for cooperative group write during dev
+umask(002);
+
+
+
+
 
 $current_page = 1;
 if (isset($_GET["page"])) $current_page = intval($_GET["page"]);
@@ -76,84 +108,105 @@ if ($current_page == 1) {
 
 if ($current_page == 2) {
 
-	$output = "";
+    // Verify Session + expose CSRF for the next form
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        session_start();
+    }
+    if (empty($_SESSION['csrf'])) {
+        $_SESSION['csrf'] = bin2hex(random_bytes(16));
+    }
+    $TPL->assign("csrf", $_SESSION['csrf']);
 
-    $ex = get_loaded_extensions();
-	$ok_count = 0;
-    
-    // Check for required extensions
-    $extensions = array();
-    $extensions[] = "mbstring";
-    $extensions[] = "gd";
-    $extensions[] = "mysqli";
+    $output = "";
+    $ok_count = 0;
 
-    for ($i=0;$i<count($extensions);$i++) {
+    // Required PHP extensions
+    $extensions = ["mbstring", "gd", "mysqli"];
+    $loaded = get_loaded_extensions();
 
-        if (in_array($extensions[$i], $ex)) {
+    foreach ($extensions as $ext) {
+        if (in_array($ext, $loaded, true)) {
             $ok_count++;
-			$output .= "Extension <b>".$extensions[$i]."</b> :: <b style=color:blue>Found</b><br/>";
+            $output .= "Extension <b>{$ext}</b> :: <b style=color:blue>Found</b><br/>";
         } else {
-            $output .= "Extension <b>".$extensions[$i]."</b> :: <b style=color:red>Missing</b><br/>";
-		}
+            $output .= "Extension <b>{$ext}</b> :: <b style=color:red>Missing</b><br/>";
+        }
     }
 
-    // Checkf ro valid paths
-	$paths = array();
-	$paths[] = "images/game/empires/";
-	$paths[] = "include/game/games_config/";
-	$paths[] = "include/game/games_rules/";
-	$paths[] = "templates_c/";
-	$paths[] = "templates_c/game/";
-	$paths[] = "templates_c/system/";
+    // Build absolute paths under the current docroot (works in Docker)
+    $docroot = rtrim(realpath($_SERVER['DOCUMENT_ROOT'] ?: __DIR__), '/');
+    $paths = [
+        "{$docroot}/images/game/empires/",
+        "{$docroot}/include/game/games_config/",
+        "{$docroot}/include/game/games_rules/",
+        "{$docroot}/templates_c/",
+        "{$docroot}/templates_c/game/",
+        "{$docroot}/templates_c/system/",
+    ];
 
+    foreach ($paths as $p) {
+        $p = rtrim($p, '/');
 
-	for ($i=0;$i<count($paths);$i++) {
-		
-		if (file_exists($paths[$i])) {
+        if (is_dir($p)) {
+            if (is_writable($p)) {
+                $ok_count++;
+                $output .= "Path <b>{$p}/</b> :: <b style=color:blue>Writable</b><br/>";
+            } else {
+                $output .= "Path <b>{$p}/</b> :: <b style=color:red>Not Writable!</b><br/>";
+            }
+            continue;
+        }
 
-			if (is_writable($paths[$i])) {
-				$ok_count++;
-				$output .= "Path <b>".$paths[$i]."</b> :: <b style=color:blue>Writable</b><br/>";
-			} else {
-				$output .= "Path <b>".$paths[$i]."</b> :: <b style=color:red>Not Writable!</b><br/>";
-			}
+        $parent = dirname($p);
 
-		} else {
-		
-			$path = explode("/",$paths[$i]);
-			$parent_path = "";
-			for ($j=0;$j<(count($path)-2);$j++) {
-				$parent_path .= $path[$j]."/";
-				
-			}
+        // Try to create parent if missing and its parent is writable
+        if (!is_dir($parent)) {
+            $grand = dirname($parent);
+            if (!is_dir($grand) || !is_writable($grand)) {
+                $output .= "Path <b>{$p}/</b> :: <b style=color:red>Not Found! Parent missing and not creatable.</b><br/>";
+                continue;
+            }
+            if (!mkdir($parent, 0755, true) && !is_dir($parent)) {
+                $output .= "Path <b>{$p}/</b> :: <b style=color:red>Not Found! Unable to create parent directory.</b><br/>";
+                continue;
+            }
+        }
 
-			if (!is_writable($parent_path)) {
-				$output .= $paths[$i]." :: <b style=color:red>Not Found! Unable to create!</b><br/>";
+        // Ensure parent (now existing) is writable before mkdir
+        if (!is_writable($parent)) {
+            $output .= "Path <b>{$p}/</b> :: <b style=color:red>Parent exists but not writable.</b><br/>";
+            continue;
+        }
 
-			} else {
-				if (!mkdir($paths[$i],0777)) {
-					$output .= $paths[$i]." :: <b style=color:red>Not Found!</b><br/>";
-				} else {
-					$output .= $paths[$i]." :: <b style=color:blue>Not Found but created</b><br/>";
-					$ok_count++;
-				}
-			}
+        if (!mkdir($p, 0755, true) && !is_dir($p)) {
+            $output .= "Path <b>{$p}/</b> :: <b style=color:red>Not Found!</b><br/>";
+        } else {
+            $ok_count++;
+            $output .= "Path <b>{$p}/</b> :: <b style=color:blue>Not Found but created</b><br/>";
+        }
+    }
 
-		}
-		
-		
-	}
-	if ($ok_count != (count($paths) + count($extensions))) $output .= "<br/><b style=color:red>*** Please fix theses isssues before continuing ***</b><br/>";
-	
-	$TPL->assign("output",$output);
-	$TPL->display("page".$current_page.".html");
-	die();
+    // Summary
+    if ($ok_count != (count($paths) + count($extensions))) {
+        $output .= "<br/><b style=color:red>*** Please fix these issues before continuing ***</b><br/>";
+    }
+
+    $TPL->assign("output", $output);
+    $TPL->display("page{$current_page}.html");
+    die();
 }
-
 /**
  * Page #3
  */
+ 
+
+
 if ($current_page==3) {
+	
+	// Verify Session
+	if (empty($_POST['csrf']) || !hash_equals($_SESSION['csrf'], $_POST['csrf'])) {
+        die("Invalid CSRF token.");
+    }
 	
 	if (!isset($_POST["db_driver"])) die("Invalid post data.");
 	
@@ -167,34 +220,59 @@ if ($current_page==3) {
 	$db_password = $db_password1;
 	$output = "";
 	
-	$DB = NewADOConnection($db_driver);
-	if (!$DB->Connect($db_hostname,$db_username,$db_password,"")) die(trigger_error($DB->ErrorMsg()));
+    // Whitelist driver and validate inputs
+    $allowed_drivers = ['mysqli', 'pdo_mysql'];
+    if (!in_array($db_driver, $allowed_drivers, true)) die("Unsupported database driver.");
+    if (!preg_match('/^[A-Za-z0-9_]+$/', $db_name)) die("Invalid database name.");
+    if (!preg_match('#^[A-Za-z0-9._-]+(:\d+)?$#', $db_hostname) && !preg_match('#^/[^\\0]+$#', $db_hostname)) {
+        die("Invalid database host (allowing host[:port] or absolute socket path).");
+    }
 
-	$query = "DROP DATABASE ".addslashes($db_name);
-	$DB->Execute($query);
 
-	$query = "CREATE DATABASE ".addslashes($db_name);
-	$DB->Execute($query);
+    $DB = NewADOConnection($db_driver);
+    $DB->setErrorHandling(ADODB_ERROR_EXCEPTION);
+    try {
+        $DB->Connect($db_hostname, $db_username, $db_password, "");
+    } catch (Throwable $t) {
+        die("Database connect failed: " . htmlspecialchars($t->getMessage()));
+    }
 
-	if (!$DB->Connect($db_hostname,$db_username,$db_password,$db_name)) die(trigger_error($DB->ErrorMsg()));
+	if (!empty($_POST['confirm_drop']) && $_POST['confirm_drop'] === '1') {
+       $DB->Execute("DROP DATABASE `{$db_name}`");
+    }
 
-	$sql_data = file_get_contents("include/sql_base.txt");
-	$sql_data = explode("/***/",$sql_data);
-	for ($i=0;$i<count($sql_data);$i++) 
-		if (!$DB->Execute($sql_data[$i])) die(trigger_error($DB->ErrorMsg()));
+	$DB->Execute("CREATE DATABASE IF NOT EXISTS `{$db_name}`");
+
+	try {
+        $DB->Connect($db_hostname, $db_username, $db_password, $db_name);
+    } catch (Throwable $t) {
+        die("Database select failed: " . htmlspecialchars($t->getMessage()));
+    }
+
+	$sql_data = @file_get_contents("include/sql_base.txt");
+    if ($sql_data === false) die("Missing include/sql_base.txt");
+    foreach (array_filter(array_map('trim', explode("/***/", $sql_data))) as $stmt) {
+        if ($stmt === '') continue;
+        if (!$DB->Execute($stmt)) {
+            die("SQL failed: " . htmlspecialchars($DB->ErrorMsg()));
+        }
+    }
 
 	$output .= "Database correctly configured. Click on continue button to complete installation.";
 	
-	$config_data = file_get_contents("include/config_orig.php");
+	$config_data = @file_get_contents("include/config_orig.php");
+	if ($config_data === false) die("Missing include/config_orig.php");
 	$config_data = str_replace("{db_hostname}",$db_hostname,$config_data);
 	$config_data = str_replace("{db_name}",$db_name,$config_data);
 	$config_data = str_replace("{db_username}",$db_username,$config_data);
 	$config_data = str_replace("{db_password}",$db_password,$config_data);
 	$config_data = str_replace("{db_driver}",$db_driver,$config_data);
 	
-	$fd = fopen("include/config.php","w");
-	fwrite($fd,$config_data);
-	fclose($fd);
+	if (!is_writable('include')) die("The 'include' directory is not writable.");
+    if (file_put_contents("include/config.php", $config_data, LOCK_EX) === false) {
+        die("Failed to write include/config.php");
+    }
+    @chmod("include/config.php", 0640);
 	
 	$TPL->assign("output",$output);
 	$TPL->display("page".$current_page.".html");
