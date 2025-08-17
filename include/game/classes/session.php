@@ -20,17 +20,17 @@ class Session {
 			if ($rs->EOF) {
 				if (!$this->DB->Execute("INSERT INTO game".$this->game_id."_tb_session (empire,lastdate) " .
 				"VALUES('" . $_SESSION["empire_id"] . "','" .
-				time(NULL) . "')")) trigger_error($this->DB->ErrorMsg());
+				time() . "')")) trigger_error($this->DB->ErrorMsg());
 
 			}
 			// update session date
 			if (!$this->DB->Execute("UPDATE game".$this->game_id."_tb_session " .
-			"SET lastdate = '" . time(NULL) . "' WHERE empire='" . $_SESSION["empire_id"]."'")) trigger_error($this->DB->ErrorMsg());
+			"SET lastdate = '" . time() . "' WHERE empire='" . $_SESSION["empire_id"]."'")) trigger_error($this->DB->ErrorMsg());
 
 		}
 
 		// delete old sessions
-		$date_timeout = time(NULL) - CONF_SESSION_TIMEOUT;
+		$date_timeout = time() - CONF_SESSION_TIMEOUT;
 		if (!$this->DB->Execute("DELETE FROM game".$this->game_id."_tb_session WHERE lastdate < $date_timeout")) trigger_error($this->DB->ErrorMsg());
 
 	}
@@ -70,7 +70,7 @@ class Session {
 
 		if (!$this->DB->Execute("INSERT INTO game".$this->game_id."_tb_session (empire,lastdate) " .
 		"VALUES('" . $_SESSION["empire_id"] . "'," .
-		time(NULL) . ")")) trigger_error($this->DB->ErrorMsg());
+		time() . ")")) trigger_error($this->DB->ErrorMsg());
 
 	
 		return true;

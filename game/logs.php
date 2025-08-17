@@ -9,7 +9,7 @@ require_once("../include/game/init_ingame.php");
 
 $GAME["template"]->setPage("logs.html");
 
-$now = time(NULL);
+$now = time();
 $sevendays = 60*60*24*7;
 $logs = array();
 

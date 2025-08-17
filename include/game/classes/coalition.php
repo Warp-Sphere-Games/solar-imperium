@@ -249,7 +249,7 @@ class Coalition
 	///////////////////////////////////////////////////////////////////////
 	function transferRandomOwnership()
 	{
-		srand(time(NULL));
+		srand(time());
 		
 		$this->transferOwnership(rand(0,count($this->members)-1));
 		
@@ -315,7 +315,7 @@ class Coalition
 		
 	
 		$query = "INSERT INTO game".$this->game_id."_tb_coalition (date,name,planets,networth,logo)".
-		"VALUES(".time(NULL).",".
+		"VALUES(".time().",".
 		"'".addslashes($coalition_name)."',".
 		"0,".
 		"0,".
@@ -330,7 +330,7 @@ class Coalition
 	
 		$query = "INSERT INTO game".$this->game_id."_tb_member (date,empire,coalition,level) ".
 		"VALUES(".
-		time(NULL).",".
+		time().",".
 		$empire_id.",".
 		$id.",".
 		"1)";

@@ -9,7 +9,7 @@ require_once("include/init.php");
 $TPL->assign("game_version",CONF_GAMEVERSION);
 $TPL->assign("server_name",CONF_SERVERNAME);
 
-$TPL->assign("server_uptime",round((time(NULL) - filectime("include/config.php")) / 60 / 60 / 24,2));
+$TPL->assign("server_uptime",round((time() - filectime("include/config.php")) / 60 / 60 / 24,2));
 
 
 

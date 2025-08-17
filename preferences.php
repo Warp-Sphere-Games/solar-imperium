@@ -137,7 +137,7 @@ while(!$rs->EOF) {
 	$hostname = explode(".",$rs->fields["last_login_hostname"]);
 	if (count($hostname) != 4) $hostname = "---"; else $hostname = $hostname[0].".".$hostname[1].".".$hostname[2].".*";
 	$item["hostname"] = $hostname;
-	$item["date"] = formatTime(time(NULL) - $rs->fields["last_login_date"]);
+	$item["date"] = formatTime(time() - $rs->fields["last_login_date"]);
 	$last_logins[] = $item;
 	$rs->MoveNext();
 }

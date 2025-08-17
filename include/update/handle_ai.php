@@ -39,10 +39,10 @@ function HandleAITurns($game_id)
 
     global $DB,$GAME;
 
-    $timeStart = time(NULL);
+    $timeStart = time();
     while(true) {
 
-        $timeNow = time(NULL);
+        $timeNow = time();
         if ($timeNow - $timeStart > 1) break;
 
         $rs = $DB->Execute("SELECT * FROM game".$game_id."_tb_empire WHERE active < 2 AND turns_left > 0 AND player_id = -1");
@@ -50,7 +50,7 @@ function HandleAITurns($game_id)
 
         while(!$rs->EOF) {
 
-            $timeNow = time(NULL);
+            $timeNow = time();
             if ($timeNow - $timeStart > 1) break;
 
             $empire = new Empire($DB,$GAME["template"],$GAME["gameplay_costs"]);
@@ -100,7 +100,7 @@ function HandleAITurns($game_id)
             /* Reset specific values */
             $empire->data["planets_bought"] = 0;
             $empire->data["already_attacked"] = 0;
-            $empire->data["last_turn_date"] = time(NULL);
+            $empire->data["last_turn_date"] = time();
             $empire->data["food_traded"] = 0;
             $empire->data["ore_traded"] = 0;
             $empire->data["petroleum_traded"] = 0;
@@ -359,7 +359,7 @@ function HandleAITurns($game_id)
 //                if ($r == 3) {
 //                    //
 //                }
-                $timeNow2 = time(NULL);
+                $timeNow2 = time();
 
             }
             

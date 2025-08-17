@@ -50,7 +50,7 @@ if ($GAME["empire"]->army->data["covert_points"] > CONF_MAX_COVERTPOINTS)
 /* Reset specific values */	
 $GAME["empire"]->data["planets_bought"] = 0;
 $GAME["empire"]->data["already_attacked"] = 0;
-$GAME["empire"]->data["last_turn_date"] = time(NULL);
+$GAME["empire"]->data["last_turn_date"] = time();
 $GAME["empire"]->data["food_traded"] = 0;
 $GAME["empire"]->data["ore_traded"] = 0;
 $GAME["empire"]->data["petroleum_traded"] = 0;

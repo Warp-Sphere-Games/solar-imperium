@@ -13,7 +13,7 @@ function HandleTradeConvoys($game_id)
 
 	while (!$rs->EOF) {
 
-		if ($rs->fields["time_end"] <= time(NULL)) {
+		if ($rs->fields["time_end"] <= time()) {
 //			print "Trade convoy reached destination ...\r\n";
 
 			$source_empire = new Empire($DB, new Template($DB,$game_id), new GameplayCosts($DB));

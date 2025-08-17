@@ -85,11 +85,11 @@ if (isset($_POST["forum_newreply"]))
 	$topic_title = $topicdata["title"];
 	$topic_title = addslashes($topic_title);
 	
-	$query = "INSERT INTO system_tb_forum (player,date_creation,title,content,parent,forum_name) VALUES(".$_SESSION["player"]["id"].",".time(NULL).",'".T_("Forum Reply: ") .$topic_title. "','".addslashes($content)."',".$topic_id.",'".$_SESSION["current_forum"]."');";
+	$query = "INSERT INTO system_tb_forum (player,date_creation,title,content,parent,forum_name) VALUES(".$_SESSION["player"]["id"].",".time().",'".T_("Forum Reply: ") .$topic_title. "','".addslashes($content)."',".$topic_id.",'".$_SESSION["current_forum"]."');";
 	$DB->Execute($query);
 	if (!$DB) trigger_error($DB->ErrorMsg());
 		
-	$query = "UPDATE system_tb_forum SET date_update=".time(NULL)." WHERE id=".$topic_id;
+	$query = "UPDATE system_tb_forum SET date_update=".time()." WHERE id=".$topic_id;
 	$DB->Execute($query);
 
 	$DB->CompleteTrans();
@@ -105,7 +105,7 @@ $page = 0;
 if (isset($_GET["page"])) $page = intval($_GET["page"]);
 
 
-$TPL->assign("topic_date",(floor((time(NULL) - $topicdata["date_creation"])/(60*60*24))+1)." days");
+$TPL->assign("topic_date",(floor((time() - $topicdata["date_creation"])/(60*60*24))+1)." days");
 $TPL->assign("topic_title",str_replace("\\'","'",bbcode2html($topicdata["title"])));
 $TPL->assign("topic_content",str_replace("\\'","'",bbcode2html($topicdata["content"])));
 $TPL->assign("topic_id",$topicdata["id"]);
@@ -113,7 +113,7 @@ $TPL->assign("topic_id",$topicdata["id"]);
 if (isset($_SESSION["player"]))
 if ($_SESSION["player"]["id"] != $topicdata["last_seen_by"]) {
     $DB->Execute(
-        "UPDATE system_tb_forum SET views=".($topicdata["views"]+1).",date_seen=".time(NULL).",last_seen_by=".$_SESSION["player"]["id"]." WHERE id=".$topicdata["id"]
+        "UPDATE system_tb_forum SET views=".($topicdata["views"]+1).",date_seen=".time().",last_seen_by=".$_SESSION["player"]["id"]." WHERE id=".$topicdata["id"]
     );
 }
 
@@ -187,7 +187,7 @@ while(!$rs->EOF)
 		$item["author_image"] = "show_avatar.php?id=".$rs2->fields["id"];
 
 		
-		$item["author_date"] = (floor((time(NULL) - $rs->fields["date_creation"])/(60*60*24))+1).T_(" days");
+		$item["author_date"] = (floor((time() - $rs->fields["date_creation"])/(60*60*24))+1).T_(" days");
 		
 		
 		

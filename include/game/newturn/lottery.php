@@ -6,7 +6,7 @@ function NewTurn_HandleLotteryPayout($game_id, $empire)
 {
 	global $DB,$GAME;
 	
-	if ($GAME["template"]->coord["lottery_date"] < time(NULL))
+	if ($GAME["template"]->coord["lottery_date"] < time())
 	{
 		// we determine who is a winner
 		$pool = array();
@@ -29,7 +29,7 @@ function NewTurn_HandleLotteryPayout($game_id, $empire)
 
 		if (count($pool) != 0) {
 
-			srand(time(NULL));
+			srand(time());
 			
 			$winner = rand(0,$range);
 			$winner_empire = -1;

@@ -220,7 +220,7 @@ if (isset ($_POST["empire"])) {
 	$time_required = floor($time_required / $units_info["carriers_" . $GAME["empire"]->army->data["carriers_level"]]["speed"]);
 	$time_required *= 10;
 	$time_required -= ($time_required % 60);
-	$time_now = time(NULL);
+	$time_now = time();
 
 	// SENDING THE CONVOY
 	$query = "INSERT INTO game".$game_id."_tb_tradeconvoy (empire_from,empire_to,trade_money,trade_food,trade_covertagents,trade_soldiers,trade_fighters,trade_lightcruisers,trade_heavycruisers,carriers,time_start,time_end)
@@ -364,7 +364,7 @@ $GAME["template"]->setVar("trade_heavycruisers_max_noformat", $heavycruisers);
 $active_trades = "";
 $rs = $DB->Execute("SELECT * FROM game".$game_id."_tb_tradeconvoy WHERE empire_from='" . $GAME["empire"]->data["id"] . "' OR empire_to='" . $GAME["empire"]->data["id"]."'");
 $count = 0;
-$time_now = time(NULL);
+$time_now = time();
 
 while (!$rs->EOF) {
 	$rs3 = $DB->Execute("SELECT * FROM game".$game_id."_tb_empire WHERE id='" . $rs->fields["empire_from"]."'");

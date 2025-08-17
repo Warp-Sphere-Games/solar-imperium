@@ -105,7 +105,7 @@ class Template
 
 		$this->TPL->assign("game_date",date("m/d/y",$this->coord["date"]));
 			
-		$date = time(NULL) - $this->coord["date"];
+		$date = time() - $this->coord["date"];
 		$this->TPL->assign("game_life",floor($date / (60*60*24)));
 
 		$online_players = $this->DB->Execute("SELECT COUNT(*) FROM game".$this->game_id."_tb_session");
@@ -485,7 +485,7 @@ class Template
 	
 		$smarty->assign("subject",stripslashes($params["subject"]));
 		$smarty->assign("content",stripslashes($params["content"]));
-		$smarty->assign("date",$this->formatTime(time(NULL) - $msg_data["date"]));
+		$smarty->assign("date",$this->formatTime(time() - $msg_data["date"]));
 		
 		
 		$rs = $this->DB->Execute("SELECT * FROM game".$this->game_id."_tb_empire WHERE id='".$msg_data["event_from"]."'");
