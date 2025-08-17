@@ -1,0 +1,6 @@
+{
+    "require": {
+        "adodb/adodb-php": "^5.22",
+        "smarty/smarty": "^4"
+    }
+}
