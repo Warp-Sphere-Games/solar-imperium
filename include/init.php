@@ -35,6 +35,51 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 
 require_once($path_prefix . "include/languages.php");
 
+// Create Smarty instance (supports Smarty 4 and 3 via fallback)
+if (class_exists('\Smarty\Smarty')) {
+    // Smarty 4 (namespaced)
+    $TPL = new \Smarty\Smarty();
+} elseif (class_exists('Smarty')) {
+    // Smarty 3 (global)
+    $TPL = new Smarty();
+} else {
+    // Last-resort: direct require in case autoloading is misconfigured
+    $rootDir = realpath($path_prefix !== "" ? $path_prefix : "./");
+    $candidate = $rootDir . '/vendor/smarty/smarty/libs/Smarty.class.php';
+    if (file_exists($candidate)) {
+        require_once $candidate;
+        if (class_exists('Smarty')) {
+            $TPL = new Smarty();
+        }
+    }
+}
+
+if (!isset($TPL)) {
+    die("Smarty not found. Ensure composer dependencies are installed (vendor/) and include paths are correct.");
+}
+
+// Assign languages and set template/compile dirs
+$TPL->assign("LANGUAGES", $LANGUAGES);
+if (isset($_GET["XML"])) {
+    // Either API works in 3/4; setTemplateDir is preferred
+    if (method_exists($TPL, 'setTemplateDir')) {
+        $TPL->setTemplateDir("templates/xml/system/");
+        $TPL->setCompileDir("templates_c/xml/system/");
+    } else {
+        $TPL->template_dir = "templates/xml/system/";
+        $TPL->compile_dir  = "templates_c/xml/system/";
+    }
+} else {
+    if (method_exists($TPL, 'setTemplateDir')) {
+        $TPL->setTemplateDir("templates/system/");
+        $TPL->setCompileDir("templates_c/system/");
+    } else {
+        $TPL->template_dir = "templates/system/";
+        $TPL->compile_dir  = "templates_c/system/";
+    }
+}
+
+
 // Timezone: set from config regardless of PHP major version
 if (!empty(CONF_TIMEZONE)) {
     date_default_timezone_set(CONF_TIMEZONE);
