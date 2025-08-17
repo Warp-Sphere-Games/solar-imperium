@@ -1,1 +1,4 @@
-/vendor/
+vendor/
+include/config.php
+templates_c/
+*.log
