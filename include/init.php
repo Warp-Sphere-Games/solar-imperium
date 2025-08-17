@@ -54,12 +54,29 @@ if (class_exists('\Smarty\Smarty')) {
     }
 }
 
+// Register a {t}{/t} block for translations
+$TPL->registerPlugin('block', 't',
+    function ($params, $content, $template, &$repeat) {
+        // Only render on the closing call when $repeat === false
+        if ($repeat) return '';
+        if ($content === null) return '';
+        // Optional placeholders support: {t name="John"}Hello %s{/t}
+        if (!empty($params)) {
+            // If you pass args like name="John", we’ll sprintf in array order
+            $args = array_values($params);
+            return vsprintf(T_($content), $args);
+        }
+        return T_($content);
+    }
+);
+
 if (!isset($TPL)) {
     die("Smarty not found. Ensure composer dependencies are installed (vendor/) and include paths are correct.");
 }
 
 // Assign languages and set template/compile dirs
 $TPL->assign("LANGUAGES", $LANGUAGES);
+
 if (isset($_GET["XML"])) {
     // Either API works in 3/4; setTemplateDir is preferred
     if (method_exists($TPL, 'setTemplateDir')) {
