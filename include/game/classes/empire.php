@@ -118,7 +118,7 @@ class Empire
 
 		// notice player
 		$message = T_("Sorry but your empire have collapsed in game")." <b>".CONF_GAME_NAME."</b> <br/>";
-		if (!$this->DB->Execute("INSERT INTO system_tb_messages (player_id,date,message) VALUES(".$this->data["player_id"].",".time(NULL).",'".addslashes($message)."')")) trigger_error($this->DB->ErrorMsg());
+		if (!$this->DB->Execute("INSERT INTO system_tb_messages (player_id,date,message) VALUES(".$this->data["player_id"].",".time().",'".addslashes($message)."')")) trigger_error($this->DB->ErrorMsg());
 
 		$this->coalition->transferRandomOwnership(-1);
 
@@ -130,7 +130,7 @@ class Empire
 		$this->DB->Execute(
 			"INSERT INTO system_tb_history (game_id,player_id,date,rank,empire_name,networth,military_might,planets,
 			population,turns_played) 
-			VALUES(".$_SESSION["game"].",".$this->data["player_id"].",".time(NULL).",0,'".$this->data["name"]."',
+			VALUES(".$_SESSION["game"].",".$this->data["player_id"].",".time().",0,'".$this->data["name"]."',
 			".$this->data["networth"].",
 			".$military_might.",
 			".$this->planets->getCount().",
@@ -280,7 +280,7 @@ class Empire
 		
 		if ($this->data["credits"] >= 0) return ""; 
 	
-		srand(time(NULL));
+		srand(time());
 	
 		$msg = "<table width=\"100%\"><tr><td><img src=\"../images/game/bankrupt.gif\" style=\"border:0px solid yellow\"></td><td valign=\"top\" align=\"center\" width=\"100%\">&nbsp;<b style=\"color:yellow\">".T_("Cannot afford maintenance costs!")."<br/>\r\n";
 
@@ -348,7 +348,7 @@ class Empire
 		
 		if ($this->data["ore"] >= 0) return ""; 
 	
-		srand(time(NULL));
+		srand(time());
 	
 		$msg = "<table width=\"100%\"><tr><td><img src=\"../images/game/no_ore.jpg\" style=\"border:0px solid yellow\"></td><td valign=\"top\" align=\"center\" width=\"100%\">&nbsp;<b style=\"color:yellow\">".T_("No enough ore!")."<br/>\r\n";
 
@@ -441,7 +441,7 @@ class Empire
 		
 		if ($this->data["petroleum"] >= 0) return ""; 
 	
-		srand(time(NULL));
+		srand(time());
 	
 		$msg = "<table width=\"100%\"><tr><td><img src=\"../images/game/no_petro.jpg\" style=\"border:0px solid yellow\"></td><td valign=\"top\" align=\"center\" width=\"100%\">&nbsp;<b style=\"color:yellow\">".T_("No enough petroleum!")."<br/>\r\n";
 
@@ -653,7 +653,7 @@ class Empire
 		$query = "INSERT INTO game".$this->game_id."_tb_stats (empire,date,credits,food,networth,military,planets,population,pollution,turn) 
 		VALUES(".
 		$this->data["id"].",".
-		time(NULL).",".
+		time().",".
 		$this->data["credits"].",".
 		$this->data["food"].",".
 		$this->data["networth"].",".

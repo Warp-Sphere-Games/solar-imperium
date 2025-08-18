@@ -78,12 +78,12 @@ if (isset($_GET["AJAX"])) {
         $hostname = str_replace("<","&lt;",$hostname);
         $hostname = str_replace(">","&gt;",$hostname);
 
-        $DB->Execute("INSERT INTO system_tb_chat_sessions (timestamp,nickname,hostname) VALUES(".time(NULL).",'".addslashes($_SESSION["player"]["nickname"])."','$hostname')");
-    //$DB->Execute("INSERT INTO system_tb_chat_log (timestamp,message) VALUES(".time(NULL).",'<b style=\"color:#FFFF99\">[".date("H:i:s")."] ".$_SESSION["player"]["nickname"]." ".T_("has joined the chatroom.")."</b>')");
+        $DB->Execute("INSERT INTO system_tb_chat_sessions (timestamp,nickname,hostname) VALUES(".time().",'".addslashes($_SESSION["player"]["nickname"])."','$hostname')");
+    //$DB->Execute("INSERT INTO system_tb_chat_log (timestamp,message) VALUES(".time().",'<b style=\"color:#FFFF99\">[".date("H:i:s")."] ".$_SESSION["player"]["nickname"]." ".T_("has joined the chatroom.")."</b>')");
 
     }
 
-    $DB->Execute("UPDATE system_tb_chat_sessions SET timestamp=".time(NULL)." WHERE nickname='".addslashes($_SESSION["player"]["nickname"])."'");
+    $DB->Execute("UPDATE system_tb_chat_sessions SET timestamp=".time()." WHERE nickname='".addslashes($_SESSION["player"]["nickname"])."'");
 
     if (isset($_GET["action"]) && ($_GET["action"]=="list_messages")) {
 
@@ -212,7 +212,7 @@ if (isset($_GET["AJAX"])) {
 
         }
 
-        $query = "INSERT INTO system_tb_chat_log (timestamp,message) VALUES(".time(NULL).",'".(addslashes($output))."')";
+        $query = "INSERT INTO system_tb_chat_log (timestamp,message) VALUES(".time().",'".(addslashes($output))."')";
         $DB->Execute($query);
         $DB->CompleteTrans();
 

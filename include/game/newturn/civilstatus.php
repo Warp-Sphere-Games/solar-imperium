@@ -6,7 +6,7 @@ function NewTurn_handleCivilStatus($game_id, $empire) {
 
 	global $CONF_CIVIL_STATUS, $DB, $GAME;
 
-	srand(time(NULL));
+	srand(time());
     
 	$msg = "";
 

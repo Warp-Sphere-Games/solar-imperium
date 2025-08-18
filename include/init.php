@@ -4,55 +4,103 @@
 $path_prefix = "";
 if (defined("CALLED_FROM_GAME_INIT")) $path_prefix = "../";
 
-
-if (!file_exists($path_prefix."include/config.php")) {
-    if (!file_exists($path_prefix."install.php")) die("No server set but installer not available too, reinstall the entire software.");
-    die(header("Location: ".$path_prefix."install.php"));
+if (!file_exists($path_prefix . "include/config.php")) {
+    if (!file_exists($path_prefix . "install.php")) die("No server set but installer not available too, reinstall the entire software.");
+    die(header("Location: " . $path_prefix . "install.php"));
 }
 
-require_once($path_prefix."include/xss_block.php");
-require_once($path_prefix."include/config.php");
-require_once($path_prefix."include/thirdparty/smarty/Smarty.class.php");
-require_once($path_prefix."include/thirdparty/adodb/adodb.inc.php");
+// --- Composer & app bootstrap ---
+$rootDir = realpath($path_prefix !== "" ? $path_prefix : "./");
+$autoload = $rootDir . "/vendor/autoload.php";
+if (!file_exists($autoload)) {
+    die("Missing dependencies. Please deploy the 'vendor' folder or run 'composer install'.");
+}
+require_once $autoload;
 
-if (isset($_POST["magickey"])) {
-    if (!session_start($_POST["magickey"])) die("Unable to create session object!");
-} else {
+require_once($path_prefix . "include/xss_block.php");
+require_once($path_prefix . "include/config.php");
+
+// ADOdb: Composer installs it under vendor/adodb/adodb-php
+// NewADOConnection() is defined by adodb.inc.php (functions are not PSR autoloaded)
+require_once $rootDir . "/vendor/adodb/adodb-php/adodb.inc.php";
+
+
+// Sessions (PHP 8): set a provided session id, then start
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    if (isset($_POST["magickey"]) && is_string($_POST["magickey"]) && $_POST["magickey"] !== '') {
+        @session_id($_POST["magickey"]);
+    }
     if (!session_start()) die("Unable to create session object!");
 }
 
-require_once($path_prefix."include/languages.php");
+require_once($path_prefix . "include/languages.php");
 
-$TPL = new Smarty();
-$TPL->assign("LANGUAGES",$LANGUAGES);
-if (isset($_GET["XML"])) {
-
-    $TPL->template_dir = "templates/xml/system/";
-    $TPL->compile_dir = "templates_c/xml/system/";
-
+// Create Smarty instance (supports Smarty 4 and 3 via fallback)
+if (class_exists('\Smarty\Smarty')) {
+    // Smarty 4 (namespaced)
+    $TPL = new \Smarty\Smarty();
+} elseif (class_exists('Smarty')) {
+    // Smarty 3 (global)
+    $TPL = new Smarty();
 } else {
+    // Last-resort: direct require in case autoloading is misconfigured
+    $rootDir = realpath($path_prefix !== "" ? $path_prefix : "./");
+    $candidate = $rootDir . '/vendor/smarty/smarty/libs/Smarty.class.php';
+    if (file_exists($candidate)) {
+        require_once $candidate;
+        if (class_exists('Smarty')) {
+            $TPL = new Smarty();
+        }
+    }
+}
 
-    $TPL->template_dir = "templates/system/";
-    $TPL->compile_dir = "templates_c/system/";
+// Register a {t}{/t} block for translations
+$TPL->registerPlugin('block', 't',
+    function ($params, $content, $template, &$repeat) {
+        // Only render on the closing call when $repeat === false
+        if ($repeat) return '';
+        if ($content === null) return '';
+        // Optional placeholders support: {t name="John"}Hello %s{/t}
+        if (!empty($params)) {
+            // If you pass args like name="John", we’ll sprintf in array order
+            $args = array_values($params);
+            return vsprintf(T_($content), $args);
+        }
+        return T_($content);
+    }
+);
 
+if (!isset($TPL)) {
+    die("Smarty not found. Ensure composer dependencies are installed (vendor/) and include paths are correct.");
+}
+
+// Assign languages and set template/compile dirs
+$TPL->assign("LANGUAGES", $LANGUAGES);
+
+if (isset($_GET["XML"])) {
+    // Either API works in 3/4; setTemplateDir is preferred
+    if (method_exists($TPL, 'setTemplateDir')) {
+        $TPL->setTemplateDir("templates/xml/system/");
+        $TPL->setCompileDir("templates_c/xml/system/");
+    } else {
+        $TPL->template_dir = "templates/xml/system/";
+        $TPL->compile_dir  = "templates_c/xml/system/";
+    }
+} else {
+    if (method_exists($TPL, 'setTemplateDir')) {
+        $TPL->setTemplateDir("templates/system/");
+        $TPL->setCompileDir("templates_c/system/");
+    } else {
+        $TPL->template_dir = "templates/system/";
+        $TPL->compile_dir  = "templates_c/system/";
+    }
 }
 
 
-if (isset($_GET["WARNING"])) $TPL->assign("warning_message",$_GET["WARNING"]);
-
-// basic PHP initialization
-
-function phpnum() {
-    $version = explode('.', phpversion());
-    return (int) $version[0];
-}
-function is_php5() { return phpnum() == 5; }
-function is_php4() { return phpnum() == 4; }
-
-if (is_php5()) {
+// Timezone: set from config regardless of PHP major version
+if (!empty(CONF_TIMEZONE)) {
     date_default_timezone_set(CONF_TIMEZONE);
 }
-
 
 if(!function_exists('make_seed')) {
     function make_seed()
@@ -62,16 +110,18 @@ if(!function_exists('make_seed')) {
     }
 }
 
-
-
 function dieError($content) {
     if (isset($_GET["XML"]))
     die("<xml><Error>$content</Error></xml>");
     die($content);
 }
 
+function make_seed(): int {
+    // microtime(true) returns float seconds; scale and cast to int
+    return (int) (microtime(true) * 1000000);
+}
 srand(make_seed());
-
+mt_srand(make_seed());
 
 ob_start();	// output buffering
 
@@ -118,7 +168,7 @@ if (isset($_SESSION["game"])) {
 
         require_once($path_prefix."include/update/victory_condition.php");
 
-        $cron_now = time(NULL);
+        $cron_now = time();
         $cron_timeslice = floor((60 * 60 * 24) / $cron_turns_per_day);
         $cron_elapsed1 = $cron_now - $rs->fields["last_turns_update"];
         $cron_elapsed2 = $cron_now - $rs->fields["last_time_update"];
@@ -258,18 +308,18 @@ if (isset($_SESSION["game"])) {
 $DB->StartTrans();
 
 // do basic cleanup //
-$expiration = time(NULL) - CONF_SESSION_CHAT_TIMEOUT;
+$expiration = time() - CONF_SESSION_CHAT_TIMEOUT;
 $rs = $DB->Execute("SELECT * FROM system_tb_chat_sessions WHERE timestamp < $expiration");
 while(!$rs->EOF)
 {
     $rs2 = $DB->Execute("SELECT last_login_date FROM system_tb_players WHERE nickname='".addslashes($rs->fields["nickname"])."'");
     $elapsed = 0;
     if(!$rs2->EOF) {
-        $elapsed = time(NULL) - $rs2->fields["last_login_date"];
+        $elapsed = time() - $rs2->fields["last_login_date"];
         $elapsed = round($elapsed / 60,2);
     }
 
-//    $DB->Execute("INSERT INTO system_tb_chat_log (timestamp,message) VALUES(".time(NULL).",'<b style=\"color:yellow\">[".date("H:i:s")."] ".$rs->fields["nickname"]." ".T_("has left the chatroom. [timeout] (Stayed for")." ".$elapsed." ".T_("minutes").")</b>')");
+//    $DB->Execute("INSERT INTO system_tb_chat_log (timestamp,message) VALUES(".time().",'<b style=\"color:yellow\">[".date("H:i:s")."] ".$rs->fields["nickname"]." ".T_("has left the chatroom. [timeout] (Stayed for")." ".$elapsed." ".T_("minutes").")</b>')");
 
     $DB->Execute("DELETE FROM system_tb_chat_sessions WHERE id=".addslashes($rs->fields["id"]));
     $rs->MoveNext();
@@ -289,9 +339,9 @@ $DB->Execute("DELETE FROM system_tb_chat_sessions WHERE timestamp < ".$expiratio
 if ((isset($_SESSION["player"])) && (isset($_SESSION["player"]["id"]))) {
     $rs = $DB->Execute("SELECT * FROM system_tb_sessions WHERE player=".$_SESSION["player"]["id"]);
     if ($rs->EOF) {
-        $DB->Execute("INSERT INTO system_tb_sessions (player,date) VALUES(".$_SESSION["player"]["id"].",".time(NULL).")");
+        $DB->Execute("INSERT INTO system_tb_sessions (player,date) VALUES(".$_SESSION["player"]["id"].",".time().")");
     } else {
-        $DB->Execute("UPDATE system_tb_sessions SET date=".time(NULL)." WHERE player=".$_SESSION["player"]["id"]);
+        $DB->Execute("UPDATE system_tb_sessions SET date=".time()." WHERE player=".$_SESSION["player"]["id"]);
     }
 
     $TPL->assign("user_is_admin",$_SESSION["player"]["admin"]);
@@ -330,7 +380,7 @@ $online_chatters = $rs->fields[0];
 $rs = $DB->Execute("SELECT id FROM system_tb_games");
 if (!$rs) trigger_error($DB->ErrorMsg());
 
-$timeout_date = time(NULL) - (60*5);
+$timeout_date = time() - (60*5);
 
 while(!$rs->EOF) {
     $DB->Execute("DELETE FROM game".$rs->fields["id"]."_tb_session WHERE lastdate <= $timeout_date");

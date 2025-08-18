@@ -18,7 +18,7 @@ $GAME["template"]->setVar("game_status",($GAME["template"]->coord["game_status"]
 if ($GAME["template"]->coord["game_status"]==0)
 	$GAME["template"]->setVar("restart_date",T_("Started"));
 else {
-	$GAME["template"]->setVar("restart_date",$GAME["template"]->coord["restart_date"] - time(NULL));
+	$GAME["template"]->setVar("restart_date",$GAME["template"]->coord["restart_date"] - time());
 }
 $rs = $DB->Execute("SELECT * FROM game".$game_id."_tb_hall_of_fame ORDER BY id DESC LIMIT 0,5");
 

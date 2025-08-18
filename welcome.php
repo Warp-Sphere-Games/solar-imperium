@@ -14,10 +14,10 @@ if (isset($_GET["LOGOFF"])) {
 		$rs = $DB->Execute("SELECT * FROM system_tb_chat_sessions WHERE nickname='".addslashes($_SESSION["player"]["nickname"])."'");
 		if (!$rs->EOF) {
 
-			$elapsed = time(NULL) - $_SESSION["player"]["last_login_date"];
+			$elapsed = time() - $_SESSION["player"]["last_login_date"];
 			$elapsed = round($elapsed / 60,2);
 
-//			$DB->Execute("INSERT INTO system_tb_chat_log (timestamp,message) VALUES(".time(NULL).",'<b style=\"color:yellow\">[".date("H:i:s")."] ".$rs->fields["nickname"]." ".T_("has left the chatroom. [logoff] (Stayed for")." ".$elapsed .T_("minutes").")</b>')");
+//			$DB->Execute("INSERT INTO system_tb_chat_log (timestamp,message) VALUES(".time().",'<b style=\"color:yellow\">[".date("H:i:s")."] ".$rs->fields["nickname"]." ".T_("has left the chatroom. [logoff] (Stayed for")." ".$elapsed .T_("minutes").")</b>')");
 			$DB->Execute("DELETE FROM system_tb_chat_sessions WHERE id=".$rs->fields["id"]);
 		}
 	}
@@ -71,7 +71,7 @@ if (isset($_GET["LOGIN"])) {
 	
 	$hostname = $_SERVER["REMOTE_ADDR"];
 	if (isset($_SERVER["X_FORWARDED_FOR"])) $hostname = $_SERVER["X_FORWARDED_FOR"];
-	$last_login_date = time(NULL);
+	$last_login_date = time();
 
 	$query = "SELECT COUNT(*) FROM system_tb_players WHERE (last_login_hostname='".addslashes($hostname)."' AND NOT (nickname = '$nickname'))";
 	$rs2 = $DB->Execute($query);
@@ -92,7 +92,7 @@ if (isset($_GET["LOGIN"])) {
 	// inserting the message
 	if (CONF_DAILY_BULLETIN != "") {
 		if ($rs->fields["daily_bulletin"] < ($last_login_date - (60*60*24))) 
-			$DB->Execute("INSERT INTO system_tb_messages (player_id,date,message) VALUES(".$rs->fields["id"].",".time(NULL).",'".CONF_DAILY_BULLETIN."')");
+			$DB->Execute("INSERT INTO system_tb_messages (player_id,date,message) VALUES(".$rs->fields["id"].",".time().",'".CONF_DAILY_BULLETIN."')");
 
 	}
 	$DB->Execute("UPDATE system_tb_players SET last_login_hostname='".addslashes($hostname)."',last_login_date=".$last_login_date.",daily_bulletin=".$last_login_date." WHERE id=".$rs->fields["id"]);

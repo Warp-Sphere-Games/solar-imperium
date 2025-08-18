@@ -10,7 +10,7 @@ function NewTurn_handleBlackMarket($game_id, $empire) {
 	$empire->data["blackmarket_cooldown"]--;
 	if ($empire->data["blackmarket_cooldown"] < 0) 	$empire->data["blackmarket_cooldown"] = 0;
 
-	srand(time(NULL));
+	srand(time());
 	
 	if ($empire->data["networth"] < CONF_BLACKMARKET_MINIMUM_NETWORTH) return;
 

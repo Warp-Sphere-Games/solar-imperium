@@ -40,7 +40,7 @@ if (isset($_GET["SIGNUP"])) {
     $_POST["country"] = str_replace("<","&lt;",$_POST["country"]);
     $_POST["country"] = str_replace(">","&gt;",$_POST["country"]);
 
-    $creation_date = time(NULL);
+    $creation_date = time();
 
     $rs = $DB->Execute("SELECT COUNT(*) FROM system_tb_players");
     $admin = 0;

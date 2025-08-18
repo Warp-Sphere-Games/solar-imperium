@@ -76,23 +76,37 @@ function MRG_error_handler_HTML_template()
 	return $body;
 }
 
-function MRG_error_handler_list_HTML($title,$listing)
+function MRG_error_handler_list_HTML($title, $listing)
 {
-	$html = "<table width=\"100%\"><tr><td colspan=\"2\" style=\"font-size:13px;font-family:verdana;color:darkred\"><b>".$title."</td></tr>\r\n";
+    $html = "<table width=\"100%\"><tr><td colspan=\"2\" style=\"font-size:13px;font-family:verdana;color:darkred\"><b>".$title."</b></td></tr>\r\n";
 
-	reset($listing);
-	$count = 0;
-	while(list($key,$value) = each($listing))
-	{
-		$bgcolor = ($count++%2==1?"#dedede":"#efefef");
+    if (!is_array($listing)) {
+        $listing = (array)$listing;
+    }
 
-		$html .= "<tr><td bgcolor=\"".$bgcolor."\"><b>$key</b></td><td width=\"100%\" bgcolor=\"".$bgcolor."\">$value</td></tr>\r\n";
-	}
+    $count = 0;
+    foreach ($listing as $key => $value) {
+        $bgcolor = ($count++ % 2 === 1) ? "#dedede" : "#efefef";
 
-	$html .= "</table>\r\n<br/>";
+        // Render non-scalars safely
+        if (is_object($value)) {
+            $value = '[object '.get_class($value).']';
+        } elseif (is_array($value)) {
+            $value = htmlspecialchars(var_export($value, true));
+        } elseif (is_resource($value)) {
+            $value = '[resource]';
+        } else {
+            $value = htmlspecialchars((string)$value);
+        }
 
-	return $html;
+        $k = htmlspecialchars((string)$key);
+        $html .= "<tr><td bgcolor=\"{$bgcolor}\"><b>{$k}</b></td><td width=\"100%\" bgcolor=\"{$bgcolor}\">{$value}</td></tr>\r\n";
+    }
+
+    $html .= "</table>\r\n<br/>";
+    return $html;
 }
+
 
 function MRG_error_handler($errno, $errstr, $errfile, $errline)
 {
@@ -138,33 +152,48 @@ function MRG_error_handler($errno, $errstr, $errfile, $errline)
 	$body .= "<b style=\"font-size:13px;font-family:verdana;color:darkred\">Execution backtrace: </b>";
 
 	// backtrace
-	$bt = debug_backtrace();
-
-	$body .= "<table width=\"100%\" style=\"font-size:10pt;font-family:verdana\">";
-	$line = $errline - 4;
-	$code = file($errfile);
-
+	$bt = debug_backtrace();  // keep args for parity
+	$html_bt = "<table width=\"100%\" style=\"font-size:10pt;font-family:verdana\">";
 	$count = 0;
 
+	foreach ($bt as $frame) {
+		if ($count === 0) { $count++; continue; } // skip the handler frame itself
+		$bgcolor = ($count++ % 2 === 0) ? "#dedede" : "#efefef";
 
-	while (list($key,$value) = each($bt))
-	{
-		if ($count == 0) { $count++; continue; }
-		$bgcolor = ($count++%2==0?"#dedede":"#efefef");
-		if (!isset($value["args"])) $value["args"] = "";
+		$file = isset($frame['file']) ? $frame['file'] : '[internal]';
+		$line = isset($frame['line']) ? $frame['line'] : 0;
+		$func = isset($frame['function']) ? $frame['function'] : '[unknown]';
 
-		if (is_array($value["args"])) 
-			$args = serialize($value["args"]);
-		else
-			$args = @implode(",",$value["args"]);
+		// Format args briefly
+		$args = '';
+		if (isset($frame['args'])) {
+			$safeArgs = [];
+			foreach ((array)$frame['args'] as $a) {
+				if (is_scalar($a) || $a === null) {
+					$safeArgs[] = var_export($a, true);
+				} elseif (is_array($a)) {
+					$safeArgs[] = '[array]';
+				} elseif (is_object($a)) {
+					$safeArgs[] = '[object '.get_class($a).']';
+				} elseif (is_resource($a)) {
+					$safeArgs[] = '[resource]';
+				} else {
+					$safeArgs[] = '[unknown]';
+				}
+			}
+			$args = htmlspecialchars(implode(', ', $safeArgs));
+		}
 
-		$body .=  "<tr><td bgcolor=\"".$bgcolor."\" style=\"color:#666666;font-size:13px;font-family:verdana\"><i>".$value["file"].":".$value["line"]."</i></td>
-				<td width=\"100%\" bgcolor=\"".$bgcolor."\" style=\"color:black;font-size:13px;font-family:verdana\">".$value["function"]."(<b>".$args."</b>)</td></tr>";
+		$fileline = htmlspecialchars("{$file}:{$line}");
+		$func = htmlspecialchars($func);
 
+		$html_bt .= "<tr><td bgcolor=\"{$bgcolor}\" style=\"color:#666666;font-size:13px;font-family:verdana\"><i>{$fileline}</i></td>
+					 <td width=\"100%\" bgcolor=\"{$bgcolor}\" style=\"color:black;font-size:13px;font-family:verdana\">{$func}(<b>{$args}</b>)</td></tr>";
 	}
-
-	$body .= "</table>";
+	$html_bt .= "</table>";
+	$body .= $html_bt;
 	$body .= "<br/>";
+
 
 
 	if (isset($_SESSION) && (count($_SESSION)!=0))

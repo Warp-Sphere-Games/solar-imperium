@@ -186,8 +186,8 @@ if (isset($_POST["invasion_empire"])) {
 	".$GAME["empire"]->army->data["heavycruisers_level"].",
 	$carriers_needed,
 	".$GAME["empire"]->army->data["carriers_level"].",
-	".time(NULL).",
-	".(time(NULL) + $time_required)."
+	".time().",
+	".(time() + $time_required)."
 	)";
 	$DB->Execute($query);
 	$convoy_id = $DB->Execute("SELECT id FROM game".$game_id."_tb_armyconvoy ORDER BY id DESC LIMIT 1");
@@ -261,7 +261,7 @@ if (isset($_POST["invasion_empire"])) {
 
 		// no enough carriers
 		if ($carriers_needed > $ally_empire->army->data["carriers"]) continue;
-		$time_now = time(NULL);
+		$time_now = time();
 
 		// creating convoy
 		$query = "

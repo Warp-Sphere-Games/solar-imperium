@@ -6,7 +6,7 @@ function NewTurn_PickRandomEvent($game_id, $empire)
 {
 	global $CONF_RANDOM_EVENTS,$GAME,$DB;
 	
-	srand(time(NULL));
+	srand(time());
 	$p = rand(0,100);
 	if ($p > CONF_RANDOMEVENT_PERCENTAGE) {
 		return;
