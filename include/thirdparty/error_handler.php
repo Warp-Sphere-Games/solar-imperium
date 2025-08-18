@@ -110,8 +110,25 @@ function MRG_error_handler_list_HTML($title, $listing)
 
 function MRG_error_handler($errno, $errstr, $errfile, $errline)
 {
-	global $MRGERR_ERROR_TYPES;
-	ob_clean();
+    // Honor @-operator and ignore deprecations (and user deprecations)
+    if (!(error_reporting() & $errno)) {
+        return false; // silenced with @
+    }
+    if ($errno === E_DEPRECATED || $errno === E_USER_DEPRECATED) {
+        return false; // don't escalate deprecations
+    }
+
+    // optionally, let notices/warnings fall through (less noisy dev)
+    /*
+    if ($errno === E_NOTICE || $errno === E_USER_NOTICE || $errno === E_WARNING || $errno === E_USER_WARNING) {
+        return false;
+    }
+    */
+
+    global $MRGERR_ERROR_TYPES;
+    ob_clean();
+    // ... rest of your existing function ...
+
 
 	$html = MRG_error_handler_HTML_template();
         $html = str_replace("{title}",$MRGERR_ERROR_TYPES[$errno][1]." : ".$errstr,$html);
