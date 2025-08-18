@@ -35,95 +35,114 @@ if (isset($_GET["LOGOFF"])) {
 // ******************************************************************************
 if (isset($_GET["LOGIN"])) {
 
-	if ($_POST["nickname"] == "") die(T_("No nickname provided."));
-	if ($_POST["password"] == "") die(T_("No password provided."));
-	
-	$nickname = utf8_encode(addslashes($_POST["nickname"]));
-	$password = md5($_POST["password"]);
+    $nickIn = isset($_POST["nickname"]) ? trim((string)$_POST["nickname"]) : '';
+    $passIn = isset($_POST["password"]) ? (string)$_POST["password"] : '';
 
-	if (substr($nickname,0,6) == "admin_")	{
+    if ($nickIn === '') die(T_("No nickname provided."));
+    if ($passIn === '') die(T_("No password provided."));
 
-	$rs = $DB->Execute("SELECT * FROM system_tb_players WHERE admin=1 AND password='$password' AND active = 1");
-	if ($rs->EOF) {
-			$nickname = "";
-			$password = "";
-		} else {
+    // Legacy: md5() kept to match existing DB. (Plan: migrate to password_hash later.)
+    $password = md5($passIn);
 
-			$nickname = substr($nickname,6);
-			$rs2 = $DB->Execute("SELECT password FROM system_tb_players WHERE nickname='$nickname' AND active = 1");
-			if ($rs2->EOF) $password = ""; else $password = $rs2->fields["password"];
-		}	
-		
-
-	}
-
-
-	$rs = $DB->Execute("SELECT * FROM system_tb_players WHERE nickname='$nickname' AND password='$password' AND active = 1");
-	if ($rs->EOF) {
-		$DB->CompleteTrans();
-
-                if (isset($_GET["XML"]))
-                    die(T_("<xml><Error>Invalid username and/or password entered!</Error></xml>"));
-                else
-                    die(T_("Invalid username and/or password entered!"));
-
-	}
-	
-	$hostname = $_SERVER["REMOTE_ADDR"];
-	if (isset($_SERVER["X_FORWARDED_FOR"])) $hostname = $_SERVER["X_FORWARDED_FOR"];
-	$last_login_date = time();
-
-	$query = "SELECT COUNT(*) FROM system_tb_players WHERE (last_login_hostname='".addslashes($hostname)."' AND NOT (nickname = '$nickname'))";
-	$rs2 = $DB->Execute($query);
-
-	$is_premium = $rs->fields["premium"];
-
-	if ($rs2->fields[0] >= CONF_MAXPLAYERS_PER_IP) {
-		if (!$is_premium) {
-			$DB->CompleteTrans();
-                        if (isset($_GET["XML"]))
-                            die(T_("<xml><Error>Too much players use this IP, login prohibited.</Error></xml>"));
-                        else
-                            die(T_("Too much players use this IP, login prohibited."));
-
-		}
-	}
-
-	// inserting the message
-	if (CONF_DAILY_BULLETIN != "") {
-		if ($rs->fields["daily_bulletin"] < ($last_login_date - (60*60*24))) 
-			$DB->Execute("INSERT INTO system_tb_messages (player_id,date,message) VALUES(".$rs->fields["id"].",".time().",'".CONF_DAILY_BULLETIN."')");
-
-	}
-	$DB->Execute("UPDATE system_tb_players SET last_login_hostname='".addslashes($hostname)."',last_login_date=".$last_login_date.",daily_bulletin=".$last_login_date." WHERE id=".$rs->fields["id"]);
-	
-	$_SESSION["player"] = $rs->fields;
-
-          // Update stats
-        $timeNow = mktime(0,0,1, date("n"), date("j"), date("Y"));
-
-        // Check if a stats entry exists for the current day
-        $stats = $DB->Execute("SELECT * FROM system_tb_stats WHERE timestamp='".intval($timeNow)."'");
-        if ($stats->EOF) {
-            // Create a new entry
-            $query = "INSERT INTO system_tb_stats (timestamp, signup_count, login_count) VALUES('".intval($timeNow)."', '0','0')";
-            $DB->Execute($query);
-            $stats = $DB->Execute("SELECT * FROM system_tb_stats WHERE timestamp='".intval($timeNow)."'");
+    // Handle admin_ prefix logic (unchanged behavior)
+    $nickname = $nickIn;
+    if (substr($nickname, 0, 6) === 'admin_') {
+        // Validate admin password first
+        $rs = $DB->Execute("SELECT id FROM system_tb_players WHERE admin = 1 AND password = ? AND active = 1 LIMIT 1", [$password]);
+        if ($rs->EOF) {
+            // invalid admin password; force failure later
+            $nickname = '';
+            $password = '';
+        } else {
+            // strip prefix and use target player's stored password
+            $nickname = substr($nickname, 6);
+            $rs2 = $DB->Execute("SELECT password FROM system_tb_players WHERE nickname = ? AND active = 1 LIMIT 1", [$nickname]);
+            $password = $rs2->EOF ? '' : (string)$rs2->fields['password'];
         }
+    }
 
-        $login_count = $stats->fields["login_count"];
-        $login_count++;
-        $query = "UPDATE system_tb_stats SET login_count='".intval($login_count)."' WHERE id='".$stats->fields["id"]."'";
-        if (!$DB->Execute($query)) trigger_error($DB->ErrorMsg());
+    // Normal login check
+    $rs = $DB->Execute(
+        "SELECT * FROM system_tb_players WHERE nickname = ? AND password = ? AND active = 1 LIMIT 1",
+        [$nickname, $password]
+    );
 
+    if ($rs->EOF) {
+        $DB->CompleteTrans();
+        if (isset($_GET["XML"])) {
+            die(T_("<xml><Error>Invalid username and/or password entered!</Error></xml>"));
+        } else {
+            die(T_("Invalid username and/or password entered!"));
+        }
+    }
 
-	$DB->CompleteTrans();
+    // Determine client IP (keep old behavior but prefer HTTP_X_FORWARDED_FOR if present)
+    $hostname = $_SERVER['REMOTE_ADDR'] ?? '';
+    if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        // Take first address in comma-separated list
+        $forwarded = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+        $hostname = trim($forwarded[0]);
+    }
 
-        if (isset($_GET["XML"]))
-            die("<xml><Success>Login Completed</Success></xml>");
-        else
-            die("login_complete");
+    $last_login_date = time();
+
+    // Count other users from same IP
+    $rs2 = $DB->Execute(
+        "SELECT COUNT(*) AS c FROM system_tb_players WHERE last_login_hostname = ? AND nickname <> ?",
+        [$hostname, $nickname]
+    );
+    $countFromIp = (int)$rs2->fields['c'];
+    $is_premium  = (int)$rs->fields['premium'] === 1;
+
+    if ($countFromIp >= (int)CONF_MAXPLAYERS_PER_IP && !$is_premium) {
+        $DB->CompleteTrans();
+        if (isset($_GET["XML"])) {
+            die(T_("<xml><Error>Too much players use this IP, login prohibited.</Error></xml>"));
+        } else {
+            die(T_("Too much players use this IP, login prohibited."));
+        }
+    }
+
+    // Daily bulletin
+    if (CONF_DAILY_BULLETIN !== '') {
+        if ((int)$rs->fields["daily_bulletin"] < ($last_login_date - (60*60*24))) {
+            $DB->Execute(
+                "INSERT INTO system_tb_messages (player_id, date, message) VALUES (?, ?, ?)",
+                [(int)$rs->fields["id"], time(), CONF_DAILY_BULLETIN]
+            );
+        }
+    }
+
+    // Update login metadata
+    $DB->Execute(
+        "UPDATE system_tb_players SET last_login_hostname = ?, last_login_date = ?, daily_bulletin = ? WHERE id = ?",
+        [$hostname, $last_login_date, $last_login_date, (int)$rs->fields["id"]]
+    );
+
+    // Bind session
+    $_SESSION["player"] = $rs->fields;
+
+    // Update stats
+    $timeNow = mktime(0,0,1, (int)date("n"), (int)date("j"), (int)date("Y"));
+    $stats = $DB->Execute("SELECT * FROM system_tb_stats WHERE timestamp = ? LIMIT 1", [$timeNow]);
+    if ($stats->EOF) {
+        $DB->Execute("INSERT INTO system_tb_stats (timestamp, signup_count, login_count) VALUES (?, 0, 0)", [$timeNow]);
+        $stats = $DB->Execute("SELECT * FROM system_tb_stats WHERE timestamp = ? LIMIT 1", [$timeNow]);
+    }
+    $login_count = (int)$stats->fields["login_count"] + 1;
+    if (!$DB->Execute("UPDATE system_tb_stats SET login_count = ? WHERE id = ?", [$login_count, (int)$stats->fields["id"]])) {
+        trigger_error($DB->ErrorMsg());
+    }
+
+    $DB->CompleteTrans();
+
+    if (isset($_GET["XML"])) {
+        die("<xml><Success>Login Completed</Success></xml>");
+    } else {
+        die("login_complete");
+    }
 }
+
 
 // ******************************************************************************
 //  Render page
