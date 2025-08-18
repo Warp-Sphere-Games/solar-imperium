@@ -11,70 +11,80 @@ require_once("include/init.php");
 // ******************************************************************************
 if (isset($_GET["SIGNUP"])) {
 
-
-    if ((!isset($_POST["agree_checkbox"])) || ($_POST["agree_checkbox"]=="false")) {
+    if ((!isset($_POST["agree_checkbox"])) || ($_POST["agree_checkbox"] === "false")) {
         $DB->CompleteTrans();
         die(T_("You must agree with the rules!"));
     }
 
-    if ($_POST["email"] == "") { $DB->CompleteTrans(); dieError(T_("Empty email field!")); }
-    if ($_POST["real_name"] == "") { $DB->CompleteTrans(); dieError(T_("Empty real name field!")); }
-    if ($_POST["country"] == "") { $DB->CompleteTrans(); dieError(T_("Empty country field!")); }
-    if ($_POST["nickname"] == "") { $DB->CompleteTrans(); dieError(T_("Empty nickname field!")); }
-    if ($_POST["password1"] == "") { $DB->CompleteTrans(); dieError(T_("Empty password(first) field!")); }
-    if ($_POST["password2"] == "") { $DB->CompleteTrans(); dieError(T_("Empty password(second) field!")); }
-    if ($_POST["password1"] != $_POST["password2"]) { $DB->CompleteTrans(); dieError(T_("Passwords entered does not matches!")); }
+    // Gather & trim
+    $email    = trim((string)($_POST["email"]     ?? ''));
+    $realName = trim((string)($_POST["real_name"] ?? ''));
+    $country  = trim((string)($_POST["country"]   ?? ''));
+    $nickname = trim((string)($_POST["nickname"]  ?? ''));
+    $pass1    = (string)($_POST["password1"] ?? '');
+    $pass2    = (string)($_POST["password2"] ?? '');
 
-    $rs = $DB->Execute("SELECT * FROM system_tb_players WHERE email='".addslashes($_POST["email"])."'");
+    // Basic presence checks
+    if ($email    === '') { $DB->CompleteTrans(); dieError(T_("Empty email field!")); }
+    if ($realName === '') { $DB->CompleteTrans(); dieError(T_("Empty real name field!")); }
+    if ($country  === '') { $DB->CompleteTrans(); dieError(T_("Empty country field!")); }
+    if ($nickname === '') { $DB->CompleteTrans(); dieError(T_("Empty nickname field!")); }
+    if ($pass1    === '') { $DB->CompleteTrans(); dieError(T_("Empty password(first) field!")); }
+    if ($pass2    === '') { $DB->CompleteTrans(); dieError(T_("Empty password(second) field!")); }
+    if ($pass1 !== $pass2){ $DB->CompleteTrans(); dieError(T_("Passwords entered does not matches!")); }
+
+    // Uniqueness checks (use qstr or params)
+    $rs = $DB->Execute("SELECT 1 FROM system_tb_players WHERE email = "   . $DB->qstr($email)   . " LIMIT 1");
     if (!$rs->EOF) { $DB->CompleteTrans(); dieError(T_("This email address is already used by someone else!")); }
 
-    $rs = $DB->Execute("SELECT * FROM system_tb_players WHERE nickname='".utf8_encode(addslashes($_POST["nickname"]))."'");
+    $rs = $DB->Execute("SELECT 1 FROM system_tb_players WHERE nickname = " . $DB->qstr($nickname) . " LIMIT 1");
     if (!$rs->EOF) { $DB->CompleteTrans(); dieError(T_("This nickname is already used by someone else!")); }
 
-    $_POST["nickname"] = str_replace("<","&lt;",$_POST["nickname"]);
-    $_POST["nickname"] = str_replace(">","&gt;",$_POST["nickname"]);
-    $_POST["real_name"] = str_replace("<","&lt;",$_POST["real_name"]);
-    $_POST["real_name"] = str_replace(">","&gt;",$_POST["real_name"]);
-    $_POST["email"] = str_replace("<","&lt;",$_POST["email"]);
-    $_POST["email"] = str_replace(">","&gt;",$_POST["email"]);
-    $_POST["country"] = str_replace("<","&lt;",$_POST["country"]);
-    $_POST["country"] = str_replace(">","&gt;",$_POST["country"]);
+    // (Legacy: the old code tried to HTML-escape before storing. That’s not necessary if your output escapes properly.
+    // If you want to keep the old behavior, uncomment next four lines.)
+    // $nickname = str_replace(["<",">"], ["&lt;","&gt;"], $nickname);
+    // $realName = str_replace(["<",">"], ["&lt;","&gt;"], $realName);
+    // $email    = str_replace(["<",">"], ["&lt;","&gt;"], $email);
+    // $country  = str_replace(["<",">"], ["&lt;","&gt;"], $country);
 
     $creation_date = time();
 
-    $rs = $DB->Execute("SELECT COUNT(*) FROM system_tb_players");
-    $admin = 0;
-    if ($rs->fields[0] == 0) $admin = 1;
-    $query = "INSERT INTO system_tb_players (admin,creation_date,email,nickname,real_name,country,password,active) VALUES($admin,$creation_date,'".addslashes($_POST["email"])."','".utf8_encode(addslashes($_POST["nickname"]))."','".utf8_encode(addslashes($_POST["real_name"]))."','".utf8_encode(addslashes($_POST["country"]))."','".md5($_POST["password1"])."',1);";
-    $DB->Execute($query);
-    if (!$DB) trigger_error($DB->ErrorMsg());
-    // already activated, no need to send email
+    // First registrant becomes admin
+    $rs = $DB->Execute("SELECT COUNT(*) AS c FROM system_tb_players");
+    $admin = ((int)$rs->fields["c"] === 0) ? 1 : 0;
 
-    // Update stats
-    $timeNow = mktime(0,0,1, date("n"), date("j"), date("Y"));
+    // INSERT with params (keeps md5 for now to avoid breaking login code)
+    $sql = "INSERT INTO system_tb_players (admin, creation_date, email, nickname, real_name, country, password, active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 1)";
+    $ok = $DB->Execute($sql, [
+        $admin,
+        $creation_date,
+        $email,
+        $nickname,
+        $realName,
+        $country,
+        md5($pass1), // TODO: migrate to password_hash() across app
+    ]);
+    if (!$ok) { trigger_error($DB->ErrorMsg()); }
 
-    // Check if a stats entry exists for the current day
-    $stats = $DB->Execute("SELECT * FROM system_tb_stats WHERE timestamp='".intval($timeNow)."'");
+    // Update daily stats
+    $timeNow = mktime(0,0,1, (int)date("n"), (int)date("j"), (int)date("Y"));
+    $stats = $DB->Execute("SELECT * FROM system_tb_stats WHERE timestamp = ?", [$timeNow]);
     if ($stats->EOF) {
-    // Create a new entry
-        $query = "INSERT INTO system_tb_stats (timestamp, signup_count, login_count) VALUES('".intval($timeNow)."', '0','0')";
-        $DB->Execute($query);
-        $stats = $DB->Execute("SELECT * FROM system_tb_stats WHERE timestamp='".intval($timeNow)."'");
+        $DB->Execute("INSERT INTO system_tb_stats (timestamp, signup_count, login_count) VALUES (?, 0, 0)", [$timeNow]);
+        $stats = $DB->Execute("SELECT * FROM system_tb_stats WHERE timestamp = ?", [$timeNow]);
     }
-
-    $signup_count = $stats->fields["signup_count"];
-    $signup_count++;
-    $query = "UPDATE system_tb_stats SET signup_count='".intval($signup_count)."' WHERE id='".$stats->fields["id"]."'";
-    $DB->Execute($query);
-    
-
+    $signup_count = (int)$stats->fields["signup_count"] + 1;
+    $DB->Execute("UPDATE system_tb_stats SET signup_count = ? WHERE id = ?", [$signup_count, (int)$stats->fields["id"]]);
 
     $DB->CompleteTrans();
-    if (isset($_GET["XML"]))
+    if (isset($_GET["XML"])) {
         $TPL->display("page_register_complete.html");
-    else
+    } else {
         die("register_complete");
+    }
 }
+
 
 
 
