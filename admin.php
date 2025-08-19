@@ -24,6 +24,33 @@ function finish_and_redirect($url) {
     exit;
 }
 
+function db_exec_or_die($sql, $context='') {
+    global $DB;
+    $ok = $DB->Execute($sql);
+    if (!$ok) {
+        $msg = $DB->ErrorMsg();
+        if (function_exists('dbg_udp')) dbg_udp("[db] $context :: $msg");
+        error_log("[DB] $context :: $msg :: $sql");
+        die("Database error ($context).");
+    }
+    return $ok;
+}
+
+// --- Helpers for SELECTs (place near db_exec_or_die) -------------------------
+if (!function_exists('db_select_or_die')) {
+    function db_select_or_die($sql, $context = '') {
+        global $DB;
+        $rs = $DB->Execute($sql);
+        if (!$rs) {
+            $msg = $DB->ErrorMsg();
+            if (function_exists('dbg_udp')) dbg_udp("[db] $context :: $msg");
+            error_log("[DB] $context :: $msg :: $sql");
+            die("Database error ($context).");
+        }
+        return $rs;
+    }
+}
+
 // check if the player is logged
 if (!isset ($_SESSION["player"])) {
 	$DB->CompleteTrans(); 
@@ -147,209 +174,231 @@ if (isset ($_GET["EDITRULES"])) {
 }
 
 // *********************************************************************************
-// Delete game callback
+// Add AI Callback
 // *********************************************************************************
-if (isset ($_GET["ADDAI"])) {
-	
-	dbg_udp("ADDAI hit; game_id=" . intval($_GET["ADDAI"]));
+if (isset($_GET['ADDAI'])) {
+    // ── INPUT & BASIC LOGGING ────────────────────────────────────────────────
+    $game_id  = (int)($_GET['ADDAI'] ?? 0);
+    $ai_level = (int)($_POST['ai_level'] ?? 1);
+    // keep AI level reasonable; original UI offers 1/5/10
+    if ($ai_level < 1)  $ai_level = 1;
+    if ($ai_level > 10) $ai_level = 10;
 
-	$game_id = intval($_GET["ADDAI"]);
-    $ai_level = intval($_POST["ai_level"]);
-	dbg_udp("ai_level=$ai_level");
+    dbg_udp("ADDAI hit; game_id={$game_id}");
+    dbg_udp("ai_level={$ai_level}");
 
-    // Pre checks
-    $rs = $DB->Execute("SELECT * FROM system_tb_games WHERE id='$game_id'");
-    if ($rs->EOF) trigger_error($DB->ErrorMsg());
+    // ── PRECHECKS ────────────────────────────────────────────────────────────
+    $rs        = db_select_or_die("SELECT * FROM system_tb_games WHERE id='{$game_id}'", 'fetch-game');
+    if ($rs->EOF) { $DB->CompleteTrans(); die(T_("Game not found.")); }
     $game_data = $rs->fields;
-	dbg_udp("game ".$game_id." max_players=".$game_data["max_players"]);
 
-    $rs = $DB->Execute("SELECT COUNT(*) FROM game".$game_id."_tb_empire");
-	dbg_udp("current empires=".$rs->fields[0]);
-    if ($rs->fields[0] >= $game_data["max_players"]) {
+    dbg_udp("game {$game_id} max_players={$game_data['max_players']}");
+
+    $rs = db_select_or_die("SELECT COUNT(*) AS n FROM game{$game_id}_tb_empire", 'count-empires');
+    dbg_udp("current empires=".$rs->fields['n']);
+    if ((int)$rs->fields['n'] >= (int)$game_data['max_players']) {
         $DB->CompleteTrans();
         die(T_("Cannot add computer component, max players reached!"));
     }
-    
-    $rs = $DB->Execute("SELECT * FROM game".$game_id."_tb_coordinator");
-	dbg_udp("coordinator rows: ".($rs->EOF ? 0 : 1));
-	if ($rs->EOF) {
+
+    $rs = db_select_or_die("SELECT * FROM game{$game_id}_tb_coordinator", 'check-coordinator');
+    dbg_udp("coordinator rows: ".($rs->EOF ? 0 : 1));
+    if ($rs->EOF) {
         $DB->CompleteTrans();
         die(T_("Game not resetted yet!"));
     }
 
-    // Create a new empire!
-    $empire_rand1 = Array(
-        'Corporate','Master','Space',
-        'Solar','Ralos','Blorgz','Heavy',
-        'Hyperdrive','USR','Rogue','Death',
-        'Star','Galactic','Cyber','Peaceful',
-        'Power','Kickass','Elite','Evil'
+    // ── NAME GENERATION (UNIQUE) ─────────────────────────────────────────────
+    $empire_rand1 = [
+        'Corporate','Master','Space','Solar','Ralos','Blorgz','Heavy',
+        'Hyperdrive','USR','Rogue','Death','Star','Galactic','Cyber',
+        'Peaceful','Power','Kickass','Elite','Evil'
+    ];
+    $empire_rand2 = [
+        'Muirepmi','Imperium','Corporation','Associates','Industries','Robotics',
+        'Nation','Squadron','Destroyers','Hyperion','Factories','Dominion'
+    ];
+    $emperor_rand1 = [
+        'Nafarious','Necro','Infamous','Illarious','Mad','Bloody','Imperial','Goth',
+        'Chief','Undead','Star','Evil','Good','Nasty','Marvellous','Lord','Solar'
+    ];
+    $emperor_rand2 = [
+        'Leader','Warrrior','Vampire','PlanetBuster','Monster','JailKeeper','Jack',
+        'Cleon I','Bevatron','Lord','Gurney','Jackal','Destroyer','Master','Chief'
+    ];
+
+    $empire_name  = '';
+    $emperor_name = '';
+    for ($tries = 0; $tries < 1000; $tries++) {
+        $empire_name  = $empire_rand1[array_rand($empire_rand1)]   . ' ' . $empire_rand2[array_rand($empire_rand2)];
+        $emperor_name = $emperor_rand1[array_rand($emperor_rand1)] . ' ' . $emperor_rand2[array_rand($emperor_rand2)];
+
+        $safe_empire  = addslashes($empire_name);
+        $safe_emperor = addslashes($emperor_name);
+
+        $rs = db_select_or_die(
+            "SELECT id FROM game{$game_id}_tb_empire WHERE emperor='{$safe_emperor}' OR name='{$safe_empire}'",
+            'check-unique-ai-names'
+        );
+        if ($rs->EOF) break; // unique
+    }
+    if ($tries >= 1000) { die(T_("Fatal error while creating new empire!")); }
+
+    // ── SPAWN POSITION (avoid 50px radius collision) ────────────────────────
+    $x = 0; $y = 0;
+    do {
+        $x = -1000 + (rand(0, 40) * 50);
+        $y = -1000 + (rand(0, 40) * 50);
+        $rs = db_select_or_die(
+            "SELECT id FROM game{$game_id}_tb_empire
+             WHERE (x BETWEEN ".($x-50)." AND ".($x+50).")
+               AND (y BETWEEN ".($y-50)." AND ".($y+50).")
+               AND active < 2",
+            'spawn-collision-check'
+        );
+    } while (!$rs->EOF);
+
+    // ── LOGO / BIO / FLAGS ──────────────────────────────────────────────────
+    // Pull a random ASCII logo from config (global $default_logo array)
+    if (!isset($default_logo) || !is_array($default_logo) || empty($default_logo)) {
+        // Fallback if missing
+        $logo_pick = '';
+    } else {
+        $logo_pick = $default_logo[array_rand($default_logo)];
+    }
+    $premium = 0;
+    $gender  = (rand(0,1) === 0 ? 'M' : 'F');
+    $autobio = T_("Resistance is futile!");
+
+    // ── INSERT AI EMPIRE (STRICT MODE SAFE) ─────────────────────────────────
+    dbg_udp("inserting AI empire");
+
+    $now = time();
+    $sql = "
+        INSERT INTO game{$game_id}_tb_empire
+        (
+            player_id, ai_level,
+            emperor, name, gender, logo, biography,
+            active, date, last_turn_date,
+            turns_left, protection_turns_left,
+            credits, last_credits, population, food,
+            x, y, premium,
+            food_rate, ore_rate, petroleum_rate,
+            attacked_by
+        ) VALUES (
+            -1, {$ai_level},
+            '".addslashes($emperor_name)."',
+            '".addslashes($empire_name)."',
+            '".addslashes($gender)."',
+            '".addslashes($logo_pick)."',
+            '".addslashes($autobio)."',
+            1, {$now}, {$now},
+            ".((int)$game_data['turns_per_day'] * 4).",
+            ".(int)$game_data['protection_turns'].",
+            ".(int)CONF_START_CREDITS.",
+            ".(int)CONF_START_CREDITS.",
+            ".(int)CONF_START_POPULATION.",
+            ".(int)CONF_START_FOOD.",
+            {$x}, {$y}, {$premium},
+            ".(int)CONF_DEFAULT_AUTOSELL_RATE.",
+            ".(int)CONF_DEFAULT_AUTOSELL_RATE.",
+            ".(int)CONF_DEFAULT_AUTOSELL_RATE.",
+            0
+        );
+    ";
+    db_exec_or_die($sql, 'insert-ai-empire');
+
+    $id = (int)$DB->Insert_ID();
+    dbg_udp("AI empire inserted id={$id}");
+
+    // ── INSERT RELATED ROWS (production / supply / planets / army) ──────────
+    db_exec_or_die(
+        "INSERT INTO game{$game_id}_tb_production (empire) VALUES ({$id})",
+        'insert-ai-production'
     );
 
-	$empire_rand2 = Array(
-        'Muirepmi','Imperium','Corporation','Associates',
-        'Industries','Robotics','Nation','Squadron',
-        'Destroyers','Hyperion','Factories','Dominion'
+    db_exec_or_die(
+        "INSERT INTO game{$game_id}_tb_supply
+         (empire, rate_soldier, rate_fighter, rate_station, rate_heavycruiser, rate_carrier, rate_covert, rate_credits)
+         VALUES ({$id}, 15, 15, 15, 15, 10, 20, 10)",
+        'insert-ai-supply'
     );
 
-    $emperor_rand1 = Array(
-        'Nafarious','Necro','Infamous','Illarious',
-        'Mad','Bloody','Imperial','Goth','Chief',
-        'Undead','Star','Evil','Good','Nasty',
-        'Marvellous','Lord','Solar'
-    );
+    db_exec_or_die("
+        INSERT INTO game{$game_id}_tb_planets
+        (
+            empire, food_planets, ore_planets, tourism_planets, supply_planets,
+            gov_planets, edu_planets, research_planets, urban_planets, petro_planets,
+            antipollu_planets
+        ) VALUES (
+            {$id},
+            ".((int)CONF_START_FOOD_PLANETS      * $ai_level).",
+            ".((int)CONF_START_ORE_PLANETS       * $ai_level).",
+            ".((int)CONF_START_TOURISM_PLANETS   * $ai_level).",
+            ".((int)CONF_START_SUPPLY_PLANETS    * $ai_level).",
+            ".((int)CONF_START_GOV_PLANETS       * $ai_level).",
+            ".((int)CONF_START_EDU_PLANETS       * $ai_level).",
+            ".((int)CONF_START_RESEARCH_PLANETS  * $ai_level).",
+            ".((int)CONF_START_URBAN_PLANETS     * $ai_level).",
+            ".((int)CONF_START_PETRO_PLANETS     * $ai_level).",
+            ".((int)CONF_START_ANTIPOLLU_PLANETS * $ai_level)."
+        );
+    ", 'insert-ai-planets');
 
-	$emperor_rand2 = Array(
-        'Leader','Warrrior','Vampire',
-        'PlanetBuster','Monster','JailKeeper','Jack',
-        'Cleon I','Bevatron','Lord','Gurney','Jackal',
-        'Destroyer','Master','Chief'
-    );
-    
-    $empire_name = "";
-    $emperor_name = "";
-    $count = 0;
-    while(true) {
-        $empire_name = $empire_rand1[rand(0,count($empire_rand1)-1)];
-        $empire_name .= " ".$empire_rand2[rand(0,count($empire_rand2)-1)];
-        $emperor_name = $emperor_rand1[rand(0,count($emperor_rand1)-1)];
-        $emperor_name .= " ".$emperor_rand2[rand(0,count($emperor_rand2)-1)];
+    db_exec_or_die("
+        INSERT INTO game{$game_id}_tb_army (empire, soldiers, fighters, stations)
+        VALUES ({$id},
+            ".((int)CONF_START_SOLDIERS  * $ai_level).",
+            ".((int)CONF_START_FIGHTERS  * $ai_level).",
+            ".((int)CONF_START_STATIONS  * $ai_level)."
+        );
+    ", 'insert-ai-army');
 
-        $rs = $DB->Execute("SELECT * FROM game".$game_id."_tb_empire WHERE emperor='".addslashes($emperor_name)."' OR name='".addslashes($empire_name)."'");
-        if ($rs->EOF) break;
-        if ($count++ == 1000) {
-            die(T_("Fatal error while creating new empire!"));        
-        }
+    // ── BROADCAST NEW EMPIRE EVENT ──────────────────────────────────────────
+    $evt_type   = (int)CONF_EVENT_NEWEMPIRE;
+    $evt_from   = $id;
+    $evt_params = addslashes(serialize([
+        'empire_emperor' => $emperor_name,
+        'empire_name'    => $empire_name,
+        'gender'         => $gender,
+    ]));
+    $evt_seen   = 0;
+    $evt_sticky = 0;
+    $evt_h      = 160;
+
+    $recipients = db_select_or_die(
+        "SELECT id FROM game{$game_id}_tb_empire WHERE active=1",
+        'fetch-empire-recipients'
+    );
+    while (!$recipients->EOF) {
+        $to = (int)$recipients->fields['id'];
+        db_exec_or_die(
+            "INSERT INTO game{$game_id}_tb_event
+             (event_type, event_from, event_to, params, seen, sticky, date, height)
+             VALUES ({$evt_type}, {$evt_from}, {$to}, '{$evt_params}', {$evt_seen}, {$evt_sticky}, {$now}, {$evt_h})",
+            'insert-event-new-empire'
+        );
+        $recipients->MoveNext();
     }
 
+    // ── EVENT GC ─────────────────────────────────────────────────────────────
+    $timeout_unseen = $now - (int)CONF_UNSEEN_EVENT_TIMEOUT;
+    $timeout_seen   = $now - (int)CONF_SEEN_EVENT_TIMEOUT;
 
-    $x = 0;
-	$y = 0;
+    db_exec_or_die(
+        "DELETE FROM game{$game_id}_tb_event WHERE date < {$timeout_unseen} AND seen=0",
+        'gc-events-unseen'
+    );
+    db_exec_or_die(
+        "DELETE FROM game{$game_id}_tb_event WHERE date < {$timeout_seen} AND seen=1",
+        'gc-events-seen'
+    );
 
-	do {
-		$x = -1000+(rand(0,40) * 50);
-		$y = -1000+(rand(0,40) * 50);
-		$rs = $DB->Execute("SELECT * FROM game".$game_id."_tb_empire WHERE (x>=".($x-50)." AND x<=".($x+50).") AND (y>=".($y-50)." AND y<=".($y+50).") AND active < 2");
-
-	} while(!$rs->EOF);
-
-	$default_logo = $default_logo[rand(0,count($default_logo)-1)];
-	$premium = 0;
-    $gender = (rand(0,1)==0?"M":"F");
-    $autobio = T_("Resistance is futile!");
-	// 4 insert data in dabase
-	dbg_udp("inserting AI empire");
-	$query = "INSERT INTO game".$game_id."_tb_empire (player_id,ai_level,
-	emperor,
-	name,
-	gender,
-	logo,
-	biography,
-	active,
-	date,
-	last_turn_date,
-	turns_left,
-	protection_turns_left,
-	credits,
-	last_credits,
-	population,
-	food,
-	x,y,premium,food_rate,ore_rate,petroleum_rate)
-	VALUES(-1,".$ai_level.",
-	'".$emperor_name."',
-	'".$empire_name."',
-	'".$gender."',
-	'$default_logo',
-	'".$autobio."',
-	1,
-	".time().",
-	".time().",
-	".($game_data["turns_per_day"]*4).",
-	".$game_data["protection_turns"].",
-	".CONF_START_CREDITS.",
-	".CONF_START_CREDITS.",
-	".CONF_START_POPULATION.",
-	".CONF_START_FOOD.",$x,$y,$premium,".CONF_DEFAULT_AUTOSELL_RATE.",".CONF_DEFAULT_AUTOSELL_RATE.",".CONF_DEFAULT_AUTOSELL_RATE."
-	);";
-
-	$DB->Execute($query);
-	if (!$DB) trigger_error($DB->ErrorMsg());
-
-
-	$id = $DB->Insert_ID();
-	dbg_udp("AI empire inserted id=$id");
-
-	$query = "INSERT INTO game".$game_id."_tb_production (empire) values($id)";
-	$DB->Execute($query);
-
-	$query = "INSERT INTO game".$game_id."_tb_supply (empire, rate_soldier, rate_fighter, rate_station, rate_heavycruiser, rate_carrier, rate_covert, rate_credits) values($id,15,15,15,15,10,20,10);";
-	$DB->Execute($query);
-
-	$query = "INSERT INTO game".$game_id."_tb_planets (
-	empire,
-	food_planets,
-	ore_planets,
-	tourism_planets,
-	supply_planets,
-	gov_planets,
-	edu_planets,
-	research_planets,
-	urban_planets,
-	petro_planets,
-	antipollu_planets)
-	VALUES(
-	$id,
-	".(CONF_START_FOOD_PLANETS * $ai_level).",
-	".(CONF_START_ORE_PLANETS * $ai_level).",
-	".(CONF_START_TOURISM_PLANETS * $ai_level).",
-	".(CONF_START_SUPPLY_PLANETS * $ai_level).",
-	".(CONF_START_GOV_PLANETS * $ai_level).",
-	".(CONF_START_EDU_PLANETS * $ai_level).",
-	".(CONF_START_RESEARCH_PLANETS * $ai_level).",
-	".(CONF_START_URBAN_PLANETS * $ai_level).",
-	".(CONF_START_PETRO_PLANETS * $ai_level).",
-	".(CONF_START_ANTIPOLLU_PLANETS * $ai_level)."
-	);";
-
-	$DB->Execute($query);
-
-	$query = "INSERT INTO game".$game_id."_tb_army (empire,soldiers,fighters,stations)
-	VALUES($id,".(CONF_START_SOLDIERS * $ai_level).",".(CONF_START_FIGHTERS * $ai_level).",".(CONF_START_STATIONS * $ai_level).");";
-	$DB->Execute($query);
-
-
-	$evt_type = CONF_EVENT_NEWEMPIRE;
-	$evt_from = $id;
-	$evt_params = array("empire_emperor"=>$emperor_name,"empire_name"=>$empire_name,"gender"=>$gender);
-	$evt_sticky = 0;
-	$evt_seen = 0;
-	$evt_height = 160;
-
-	$query = "SELECT * FROM game".$game_id."_tb_empire WHERE active=1";
-	$recipients = $DB->Execute($query);
-	while(!$recipients->EOF)
-	{
-		$query = "INSERT INTO game".$game_id."_tb_event (event_type,event_from,event_to,params,seen,sticky,date,height) ".
-		"VALUES(".$evt_type.",".$evt_from.",".$recipients->fields["id"].",'".addslashes(serialize($evt_params))."',".$evt_seen.",".$evt_sticky.",".time().",".$evt_height.")";
-		if (!$DB->Execute($query)) trigger_error($DB->ErrorMsg());
-		$recipients->MoveNext();
-	}
-
-	// garbage collection
-	$timeout_unseen = time() - CONF_UNSEEN_EVENT_TIMEOUT;
-	$timeout_seen = time() - CONF_SEEN_EVENT_TIMEOUT;
-
-	if (!$DB->Execute("DELETE FROM game".$game_id."_tb_event WHERE date < $timeout_unseen AND seen=0")) trigger_error($this->DB->ErrorMsg());
-	if (!$DB->Execute("DELETE FROM game".$game_id."_tb_event WHERE date < $timeout_seen AND seen=1")) trigger_error($this->DB->ErrorMsg());
-	
-	dbg_udp("ADDAI done; redirecting");
-	$DB->CompleteTrans();
-	finish_and_redirect('admin.php');   
-    
-
-    
+    // ── DONE ─────────────────────────────────────────────────────────────────
+    dbg_udp("ADDAI done; redirecting");
+    $DB->CompleteTrans();
+    finish_and_redirect('admin.php');
 }
-
 
 // *********************************************************************************
 // Delete game callback
