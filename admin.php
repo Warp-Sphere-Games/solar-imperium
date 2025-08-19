@@ -4,10 +4,30 @@
 define("LANGUAGE_DOMAIN","system");
 require_once ("include/init.php");
 
+// --- DEBUG: minimal UDP notifier (bypasses error handler entirely) ---
+if (!function_exists('dbg_udp')) {
+    function dbg_udp($msg) {
+        $h = '10.8.0.22'; $p = 50001;
+        $pref = '[admin.php] ';
+        $errno = 0; $errstr = '';
+        $fp = @fsockopen("udp://$h", $p, $errno, $errstr, 0.5);
+        if ($fp) { @fwrite($fp, $pref . $msg); @fclose($fp); }
+    }
+}
+
+function finish_and_redirect($url) {
+    global $DB;
+    // If you started a transaction globally, this will commit it
+    // If none is active, ADOdb just returns
+    @$DB->CompleteTrans();
+    header("Location: $url");
+    exit;
+}
+
 // check if the player is logged
 if (!isset ($_SESSION["player"])) {
 	$DB->CompleteTrans(); 
-	die(header("Location: welcome.php"));
+	finish_and_redirect('admin.php');   
 }
 
 // check if the player is admin
@@ -42,7 +62,7 @@ if (isset($_GET["POSTMSG"])) {
 	}
 	$DB->CompleteTrans(); 
 
-	die(header("Location: admin.php"));
+	finish_and_redirect('admin.php');   
 }
 
 // *********************************************************************************
@@ -56,7 +76,7 @@ if (isset($_GET["UPDATE_DESCRIPTION"])) {
 
 	$DB->Execute("UPDATE system_tb_games SET description='$description' WHERE id='$game_id'");
 	$DB->CompleteTrans(); 
-	die(header("Location: admin.php"));
+	finish_and_redirect('admin.php');   
 }
 
 // *********************************************************************************
@@ -68,7 +88,7 @@ if (isset ($_GET["RESETRULES"])) {
 
 	copy("include/game/rules_orig.php","include/game/games_rules/" . $game_id . ".php");
 	$DB->CompleteTrans(); 
-	die(header("Location: admin.php"));
+	finish_and_redirect('admin.php');   
 }
 
 // *********************************************************************************
@@ -97,7 +117,7 @@ if (isset ($_GET["UPDATERULES"])) {
 	fwrite($fd,stripslashes($filedata));
 	fclose($fd);
 	$DB->CompleteTrans(); 
-	die(header("Location: admin.php"));
+	finish_and_redirect('admin.php');   
 
 }
 
@@ -130,22 +150,28 @@ if (isset ($_GET["EDITRULES"])) {
 // Delete game callback
 // *********************************************************************************
 if (isset ($_GET["ADDAI"])) {
+	
+	dbg_udp("ADDAI hit; game_id=" . intval($_GET["ADDAI"]));
 
 	$game_id = intval($_GET["ADDAI"]);
     $ai_level = intval($_POST["ai_level"]);
+	dbg_udp("ai_level=$ai_level");
 
     // Pre checks
     $rs = $DB->Execute("SELECT * FROM system_tb_games WHERE id='$game_id'");
     if ($rs->EOF) trigger_error($DB->ErrorMsg());
     $game_data = $rs->fields;
+	dbg_udp("game ".$game_id." max_players=".$game_data["max_players"]);
 
     $rs = $DB->Execute("SELECT COUNT(*) FROM game".$game_id."_tb_empire");
+	dbg_udp("current empires=".$rs->fields[0]);
     if ($rs->fields[0] >= $game_data["max_players"]) {
         $DB->CompleteTrans();
         die(T_("Cannot add computer component, max players reached!"));
     }
     
     $rs = $DB->Execute("SELECT * FROM game".$game_id."_tb_coordinator");
+	dbg_udp("coordinator rows: ".($rs->EOF ? 0 : 1));
 	if ($rs->EOF) {
         $DB->CompleteTrans();
         die(T_("Game not resetted yet!"));
@@ -212,6 +238,7 @@ if (isset ($_GET["ADDAI"])) {
     $gender = (rand(0,1)==0?"M":"F");
     $autobio = T_("Resistance is futile!");
 	// 4 insert data in dabase
+	dbg_udp("inserting AI empire");
 	$query = "INSERT INTO game".$game_id."_tb_empire (player_id,ai_level,
 	emperor,
 	name,
@@ -250,6 +277,7 @@ if (isset ($_GET["ADDAI"])) {
 
 
 	$id = $DB->Insert_ID();
+	dbg_udp("AI empire inserted id=$id");
 
 	$query = "INSERT INTO game".$game_id."_tb_production (empire) values($id)";
 	$DB->Execute($query);
@@ -313,9 +341,10 @@ if (isset ($_GET["ADDAI"])) {
 
 	if (!$DB->Execute("DELETE FROM game".$game_id."_tb_event WHERE date < $timeout_unseen AND seen=0")) trigger_error($this->DB->ErrorMsg());
 	if (!$DB->Execute("DELETE FROM game".$game_id."_tb_event WHERE date < $timeout_seen AND seen=1")) trigger_error($this->DB->ErrorMsg());
-
+	
+	dbg_udp("ADDAI done; redirecting");
 	$DB->CompleteTrans();
-	die(header("Location: admin.php"));
+	finish_and_redirect('admin.php');   
     
 
     
@@ -345,7 +374,7 @@ if (isset ($_GET["DELETEGAME"])) {
 	if (file_exists("include/game/games_config/" . $game_id . ".php")) unlink("include/game/games_config/" . $game_id . ".php");
 	if (file_exists("include/game/games_rules/" . $game_id . ".php")) unlink("include/game/games_rules/" . $game_id . ".php");
 	$DB->CompleteTrans(); 
-	die(header("Location: admin.php"));
+	finish_and_redirect('admin.php');   
 }
 
 // *********************************************************************************
@@ -590,7 +619,7 @@ if (isset ($_GET["ADDGAME"])) {
 	}
 
 	$DB->CompleteTrans();
-	die(header("Location: admin.php?"));
+	finish_and_redirect('admin.php');   
 }
 
 

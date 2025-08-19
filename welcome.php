@@ -2,6 +2,9 @@
 // Solar Imperium is licensed under GPL2, Check LICENSE.TXT for mode details //
 define("LANGUAGE_DOMAIN","system");
 
+if (isset($_GET['TEST_ERR'])) {
+    trigger_error("Test warning path", E_USER_WARNING);
+}
 
 require_once("include/init.php");
 

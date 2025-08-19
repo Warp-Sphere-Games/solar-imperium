@@ -1,24 +1,29 @@
 <?php
 
-	/********************************************************************************************
-	 *
-	 * SOLAR IMPERIUM project, released under GPL 2 (see LICENSE.TXT)
-	 * ------------------------------------------------------------------------------------------
-	 * By Yanick Bourbeau @ MRG Technologies '2006 (ybourbeau@mrgtech.ca)
-	 * ------------------------------------------------------------------------------------------
-	 *
-	 * 2.0 Release: 2006-04-15 :: File created (ybo)
-	 *
-	 *********************************************************************************************/
+// --- configuration ---
+define("MRGERR_DEBUG_VERBOSE", true);   // show full HTML error page
+define("MRGERR_DEBUG_SENDMAIL", false); // keep SMTP off
 
-// configuration
-//define("MRGERR_DEBUG_VERBOSE",true); // Display verbose debug to web user
-//define("MRGERR_DEBUG_SENDMAIL",false); // Send a email containing debug information
-define("MRGERR_DEBUG_VERBOSE",true); // Display verbose debug to web user
-define("MRGERR_DEBUG_SENDMAIL",false); // Send a email containing debug information
+// Notify method: 'udp' | 'file' | 'none' | 'smtp' (legacy mail block)
+define("MRGERR_NOTIFY_METHOD", "udp");
+
+// UDP target for Windows notifications (your workstation listener)
+define("MRGERR_NOTIFY_UDP_HOST", "10.8.0.22");
+define("MRGERR_NOTIFY_UDP_PORT", 50001);
+
+// Optional file log (used if MRGERR_NOTIFY_METHOD='file')
+define("MRGERR_LOGFILE", __DIR__ . "/../../var/errors.log");
+
+// PHP error reporting
+error_reporting(E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED);
+ini_set('display_errors', true);
+ini_set('display_startup_errors', true);
+ob_start();
+
+// if you want to use smtp under unix (kept for compatibility)
 define("MRGERR_SMTP_SERVER","127.0.0.1");
-define("MRGERR_SMTP_MAILFROM","ybourbeau@mrgtech.ca");
-define("MRGERR_SMTP_MAILTO","ybourbeau@mrgtech.ca");
+define("MRGERR_SMTP_MAILFROM","email@example.com");
+define("MRGERR_SMTP_MAILTO","email@example.com");
 
 $MRGERR_ERROR_TYPES = array();
 $MRGERR_ERROR_TYPES[E_ERROR] = array("E_ERROR","Fatal Error");
@@ -35,15 +40,8 @@ $MRGERR_ERROR_TYPES[E_USER_NOTICE] = array("E_NOTICE","User Notice");
 $MRGERR_ERROR_TYPES[E_STRICT] = array("E_STRICT","Strict Code");
 $MRGERR_ERROR_TYPES[E_DEPRECATED] = array("E_DEPRECATED","Deprecated Code");
 
-// required initialization
-error_reporting(E_ALL);
-ini_set('display_errors',true);
-ini_set('display_startup_errors',true);
-ob_start();
-
 // if you want to use smtp under unix
 ini_set('SMTP',MRGERR_SMTP_SERVER);
-
 
 function MRG_error_handler_HTML_template()
 {
@@ -107,37 +105,26 @@ function MRG_error_handler_list_HTML($title, $listing)
     return $html;
 }
 
-
 function MRG_error_handler($errno, $errstr, $errfile, $errline)
 {
-    // Honor @-operator and ignore deprecations (and user deprecations)
-    if (!(error_reporting() & $errno)) {
-        return false; // silenced with @
-    }
-    if ($errno === E_DEPRECATED || $errno === E_USER_DEPRECATED) {
-        return false; // don't escalate deprecations
-    }
+    // Honor @-operator and ignore deprecations
+    if (!(error_reporting() & $errno)) return false; // silenced with @
+    if ($errno === E_DEPRECATED || $errno === E_USER_DEPRECATED) return false;
 
-    // optionally, let notices/warnings fall through (less noisy dev)
-    /*
-    if ($errno === E_NOTICE || $errno === E_USER_NOTICE || $errno === E_WARNING || $errno === E_USER_WARNING) {
-        return false;
-    }
-    */
+    // If you want fewer popups, also ignore notices/warnings:
+    // if (in_array($errno, [E_NOTICE, E_USER_NOTICE, E_WARNING, E_USER_WARNING], true)) return false;
 
     global $MRGERR_ERROR_TYPES;
     ob_clean();
-    // ... rest of your existing function ...
 
+    $html = MRG_error_handler_HTML_template();
+    $title = (isset($MRGERR_ERROR_TYPES[$errno]) ? $MRGERR_ERROR_TYPES[$errno][1] : 'Error') . " : " . $errstr;
+    $html = str_replace("{title}", $title, $html);
+    $html = str_replace("{platform}", "PHP " . PHP_VERSION . " (" . PHP_OS . ")", $html);
 
-	$html = MRG_error_handler_HTML_template();
-        $html = str_replace("{title}",$MRGERR_ERROR_TYPES[$errno][1]." : ".$errstr,$html);
-
-	$html = str_replace("{platform}","PHP ". PHP_VERSION ." (".PHP_OS.")",$html);
-
-	$body = "";
-	$body .=  "<br/><div align=\"center\">$errstr in <b>$errfile:$errline</b></div><br/>\n";
-	$body_short = $body;
+    $body  = "";
+    $body .= "<br/><div align=\"center\">$errstr in <b>$errfile:$errline</b></div><br/>\n";
+    $body_short = $body;
 
 	// code
 	$body .= "<b style=\"font-size:13px;font-family:verdana;color:darkred\">Error line in $errfile: </b>";
@@ -211,14 +198,11 @@ function MRG_error_handler($errno, $errstr, $errfile, $errline)
 	$body .= $html_bt;
 	$body .= "<br/>";
 
-
-
 	if (isset($_SESSION) && (count($_SESSION)!=0))
 	{
 		// session variables
 		$body .=  MRG_error_handler_list_HTML("Session Variables:",$_SESSION);
 	}
-
 
 	if (isset($_POST) && (count($_POST)!=0))
 	{
@@ -240,7 +224,6 @@ function MRG_error_handler($errno, $errstr, $errfile, $errline)
 	}
 
 	// DEFINED variables
-
 	$const = get_defined_vars();
 	unset($const["html"]);
 	unset($const["body"]);
@@ -252,7 +235,6 @@ function MRG_error_handler($errno, $errstr, $errfile, $errline)
 		$body .=  MRG_error_handler_list_HTML("USER Defined Variables:",$const);
 	}
 
-	
 	// functions in scope
 	$funct = get_defined_functions();
 	$funct = @$funct["user"];
@@ -262,7 +244,6 @@ function MRG_error_handler($errno, $errstr, $errfile, $errline)
 		// server variables
 		$body .=  MRG_error_handler_list_HTML("USER Defined Functions:",$funct);
 	}
-
 
 	// Sending email
 	if (MRGERR_DEBUG_SENDMAIL==true)
@@ -320,10 +301,71 @@ function MRG_error_handler($errno, $errstr, $errfile, $errline)
 		$html = str_replace("{body}",$body_short,$html);
 	}
 
+    // --- Send a concise notification via chosen channel ---
+    $subject = $title;
 
-	die($html);
+	// Before finishing, send concise notification via UDP/file
+    $url = !empty($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '';
+    $short = basename($errfile) . ':' . $errline . ($url ? " [$url]" : '');
+    MRG_notify($title, $short);
+
+    if (MRGERR_DEBUG_VERBOSE==true) {
+        $html = str_replace("{body}",$body,$html);
+    } else {
+        $html = str_replace("{body}",$body_short,$html);
+    }
+    die($html);
 }
 
+function MRG_notify($subject, $text) {
+    $method = MRGERR_NOTIFY_METHOD;
+
+    if ($method === 'udp') {
+        $host = MRGERR_NOTIFY_UDP_HOST;
+        $port = (int)MRGERR_NOTIFY_UDP_PORT;
+        $payload = '[' . date('Y-m-d H:i:s') . "] $subject - $text";
+        $errno = 0; $errstr = '';
+        $fp = @fsockopen("udp://{$host}", $port, $errno, $errstr, 1.0);
+        if ($fp) { @fwrite($fp, $payload); @fclose($fp); }
+        return;
+    }
+
+    if ($method === 'file') {
+        $line = '[' . date('Y-m-d H:i:s') . "] $subject - $text\n";
+        @error_log($line, 3, MRGERR_LOGFILE);
+        return;
+    }
+
+}
+
+register_shutdown_function(function () {
+    $e = error_get_last();
+    if (!$e) return;
+
+    // Fatal-ish errors that bypass set_error_handler
+    $fatalTypes = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR];
+    if (!in_array($e['type'], $fatalTypes, true)) return;
+
+    // Build a concise subject/text and send via UDP/file
+    $typeLabel = 'Fatal Error';
+    // Optional: map types to your $MRGERR_ERROR_TYPES names
+    if (isset($GLOBALS['MRGERR_ERROR_TYPES'][$e['type']][1])) {
+        $typeLabel = $GLOBALS['MRGERR_ERROR_TYPES'][$e['type']][1];
+    }
+    $subject = $typeLabel . ' : ' . $e['message'];
+    $url = !empty($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '';
+    $short = basename($e['file']) . ':' . $e['line'] . ($url ? " [$url]" : '');
+    if (function_exists('MRG_notify')) {
+        MRG_notify($subject, $short);
+    }
+
+    // Optional minimal output so the browser doesn’t just white-screen
+    if (!headers_sent()) {
+        http_response_code(500);
+        header('Content-Type: text/html; charset=UTF-8');
+    }
+    echo "<h3 style='font-family: sans-serif'>Server Error</h3>";
+});
 
 set_error_handler("MRG_error_handler");
 

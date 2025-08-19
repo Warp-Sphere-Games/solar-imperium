@@ -4,6 +4,8 @@
 $path_prefix = "";
 if (defined("CALLED_FROM_GAME_INIT")) $path_prefix = "../";
 
+require_once($path_prefix."include/thirdparty/error_handler.php");
+
 if (!file_exists($path_prefix . "include/config.php")) {
     if (!file_exists($path_prefix . "install.php")) die("No server set but installer not available too, reinstall the entire software.");
     die(header("Location: " . $path_prefix . "install.php"));
@@ -136,7 +138,7 @@ $DB = NewADOConnection(CONF_DATABASE_DRIVER);
 if (!@$DB->Connect(CONF_DATABASE_HOSTNAME,CONF_DATABASE_USERNAME,CONF_DATABASE_PASSWORD,CONF_DATABASE_NAME))
     die("Database is currently offline, come back in few minutes. Thank you.");
 
-require_once($path_prefix."include/thirdparty/error_handler.php");
+
 
 // Do cron update here
 if (isset($_SESSION["game"])) {
