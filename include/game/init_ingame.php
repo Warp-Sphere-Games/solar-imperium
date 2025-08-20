@@ -4,6 +4,9 @@
 if (!isset($_SESSION["game"])) die(T_("No game selected!"));
 $game_id = $_SESSION["game"];
 
+// create a Session object tied to this DB connection
+$GAME["session"] = new Session($DB);
+
 // verify if session is active
 $active = $GAME["session"]->isActive();
 
