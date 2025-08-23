@@ -3,26 +3,34 @@
 
 class EventRenderer
 {
-	var $DB;
-	var $TEMPLATE;
-	var $GAME_TPL;
-	var $height;
-	var $game_id;
+    var $DB;
+    var $TEMPLATE;
+    var $GAME_TPL;
+    var $height;
+    var $game_id;
 
-	//////////////////////////////////////////////////////////////////////////////
-	//
-	//////////////////////////////////////////////////////////////////////////////
-	function EventRenderer($DB,$GAME_TPL)
-	{
-		$this->DB = $DB;
-		$this->TEMPLATE = new Smarty();
-		$this->TEMPLATE->template_dir = "../templates/game/";
-		$this->TEMPLATE->compile_dir = "../templates_c/game/";
+    // PHP 8+ constructor: delegate to legacy constructor
+    public function __construct($DB_param = null, $GAME_TPL = null) {
+        if ($DB_param === null) {
+            // fallback to global if not provided
+            global $DB;
+            $DB_param = $DB;
+        }
+        $this->EventRenderer($DB_param, $GAME_TPL);
+    }
 
-		$this->GAME_TPL = $GAME_TPL;
-		$this->height = 160;
-		$this->game_id = round($_SESSION["game"]);
-	}
+    // Legacy PHP4-style constructor (kept for older code paths)
+    function EventRenderer($DB, $GAME_TPL)
+    {
+        $this->DB = $DB;
+        $this->TEMPLATE = new Smarty();
+        $this->TEMPLATE->template_dir = "../templates/game/";
+        $this->TEMPLATE->compile_dir = "../templates_c/game/";
+
+        $this->GAME_TPL = $GAME_TPL;
+        $this->height = 160;
+        $this->game_id = (int)($_SESSION["game"] ?? 0);
+    }
 
 	//////////////////////////////////////////////////////////////////////////////
 	//
