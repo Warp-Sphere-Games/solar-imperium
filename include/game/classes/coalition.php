@@ -30,8 +30,21 @@ class Coalition
     function Coalition($DB = null) {
         $this->__construct($DB);
     }
+	
+	// Canonical check: is this empire in a coalition?
+	public function IsMember(): bool {
+		return $this->member !== null;
+	}
 
-    ///////////////////////////////////////////////////////////////////////
+	// Is the current member the owner?
+	public function IsOwner(): bool {
+		return $this->IsMember()
+			&& isset($this->member['level'])
+			&& (int)$this->member['level'] === 1;
+	}
+
+
+	///////////////////////////////////////////////////////////////////////
     // load coalition for a given empire
     ///////////////////////////////////////////////////////////////////////
     function load($empire_id)
