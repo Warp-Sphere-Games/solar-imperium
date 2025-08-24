@@ -24,6 +24,7 @@ class EventRenderer
     {
         $this->DB = $DB;
         $this->TEMPLATE = new Smarty();
+		$this->TEMPLATE->addPluginsDir(__DIR__ . '/../smarty_plugins');
         $this->TEMPLATE->template_dir = "../templates/game/";
         $this->TEMPLATE->compile_dir = "../templates_c/game/";
 

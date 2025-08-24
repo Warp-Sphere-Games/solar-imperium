@@ -34,6 +34,7 @@ class Template
         }
 
         $this->TPL = new Smarty();
+		$this->TPL->addPluginsDir(__DIR__ . '/../smarty_plugins');
 
         if (isset($_GET["XML"])) {
             $this->TPL->template_dir = "../templates/xml/game/";
