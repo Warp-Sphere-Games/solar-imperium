@@ -1,92 +1,108 @@
 <?php
-
 // Solar Imperium is licensed under GPL2, Check LICENSE.TXT for mode details //
-
 
 class Planets
 {
+    /** @var \ADOConnection|null */
+    var $DB;
+    /** @var mixed */
+    var $TEMPLATE;
+    /** @var array */
+    var $data = [];
+    /** @var string */
+    var $data_footprint = '';
+    /** @var int */
+    var $game_id = 0;
 
-	var $DB;
-	var $TEMPLATE;
-	var $data;
-	var $data_footprint;
-	var $game_id;
-	
-	///////////////////////////////////////////////////////////////////////
-	//
-	///////////////////////////////////////////////////////////////////////
-	function Planets($DB,$TEMPLATE)
-	{
-		$this->DB = $DB;
-		$this->TEMPLATE = $TEMPLATE;
-		$this->game_id = round($_SESSION["game"]);
-	}
+    // Modern constructor with optional injection; falls back to globals
+    function __construct($DB = null, $TEMPLATE = null)
+    {
+        if ($DB === null) {
+            global $DB;
+            $this->DB = isset($DB) ? $DB : null;
+        } else {
+            $this->DB = $DB;
+        }
 
-	///////////////////////////////////////////////////////////////////////
-	//
-	///////////////////////////////////////////////////////////////////////
-	function load($empire_id)
-	{
-		$this->data = $this->DB->Execute("SELECT * FROM game".$this->game_id."_tb_planets WHERE empire='".intval($empire_id)."'");	
-		if (!$this->data) trigger_error($this->DB->ErrorMsg());
-		if ($this->data->EOF) return false;
-		$this->data = $this->data->fields;
+        if ($TEMPLATE === null) {
+            global $TPL;
+            $this->TEMPLATE = isset($TPL) ? $TPL : null;
+        } else {
+            $this->TEMPLATE = $TEMPLATE;
+        }
 
-		$this->data_footprint = md5(serialize($this->data));
+        $this->game_id = isset($_SESSION['game']) ? (int)$_SESSION['game'] : 0;
+    }
 
+    // Back-compat PHP4-style constructor
+    function Planets($DB = null, $TEMPLATE = null) { $this->__construct($DB, $TEMPLATE); }
 
-		return true;
-	}
+    ///////////////////////////////////////////////////////////////////////
+    function load($empire_id)
+    {
+        if (!$this->DB) {
+            trigger_error('Planets::load called without a valid DB handle', E_USER_ERROR);
+            return false;
+        }
 
-	///////////////////////////////////////////////////////////////////////
-	//
-	///////////////////////////////////////////////////////////////////////
-	function save()
-	{
-		if (md5(serialize($this->data)) == $this->data_footprint) return;
+        $empire_id = (int)$empire_id;
+        $sql = "SELECT * FROM game{$this->game_id}_tb_planets WHERE empire='{$empire_id}'";
+        $rs = $this->DB->Execute($sql);
+        if (!$rs) {
+            trigger_error($this->DB->ErrorMsg() . " :: {$sql}", E_USER_ERROR);
+            return false;
+        }
+        if ($rs->EOF) return false;
 
-		$query = "UPDATE game".$this->game_id."_tb_planets SET ";
-		reset($this->data);
-		while (list($key,$value) = each($this->data))
-		{
-			if ($key == "id") continue;
-			if ($key == "empire") continue;
-			if (is_numeric($key)) continue;
-			if ((is_numeric($value)) && ($key != "logo"))
-				$query .= "$key=$value,";
-			else
-				$query .= "$key='".addslashes($value)."',";
-			
-		}
+        $this->data = $rs->fields ?? [];
+        $this->data_footprint = md5(serialize($this->data));
+        return true;
+    }
 
-		$query = substr($query,0,strlen($query)-1); // removing remaining ,
-		$query .= " WHERE empire='".$this->data["empire"]."'";
-		if (!$this->DB->Execute($query)) trigger_error($this->DB->ErrorMsg());
+    ///////////////////////////////////////////////////////////////////////
+    function save()
+    {
+        if (!$this->DB) {
+            trigger_error('Planets::save called without a valid DB handle', E_USER_ERROR);
+            return;
+        }
+        if (md5(serialize($this->data)) === $this->data_footprint) return;
 
-	}
+        $sets = [];
+        foreach ($this->data as $key => $value) {
+            if ($key === 'id' || $key === 'empire' || is_int($key)) continue;
 
+            if (is_numeric($value) && $key !== 'logo') {
+                $num = (float)$value;
+                if ($num < 0) $num = 0;
+                $sets[] = $key . '=' . (strpos((string)$num, '.') === false ? (int)$num : $num);
+            } else {
+                $sets[] = $key . "='" . addslashes((string)$value) . "'";
+            }
+        }
 
-	///////////////////////////////////////////////////////////////////////
-	//
-	///////////////////////////////////////////////////////////////////////
-	function getCount()
-	{
-		$count = 0;
-		$count += $this->data["food_planets"];
-		$count += $this->data["ore_planets"];
-		$count += $this->data["tourism_planets"];
-		$count += $this->data["supply_planets"];
-		$count += $this->data["gov_planets"];
-		$count += $this->data["edu_planets"];
-		$count += $this->data["research_planets"];
-		$count += $this->data["urban_planets"];
-		$count += $this->data["petro_planets"];
-		$count += $this->data["antipollu_planets"];
+        if (empty($sets)) return;
 
-		return $count;
-	}
-	
+        $empireId = isset($this->data['empire']) ? (int)$this->data['empire'] : 0;
+        $sql = "UPDATE game{$this->game_id}_tb_planets SET " . implode(',', $sets) . " WHERE empire='{$empireId}'";
+        if (!$this->DB->Execute($sql)) {
+            trigger_error($this->DB->ErrorMsg() . " :: {$sql}", E_USER_ERROR);
+        }
+    }
+
+    ///////////////////////////////////////////////////////////////////////
+    function getCount()
+    {
+        if (empty($this->data)) return 0;
+        $keys = [
+            'food_planets','ore_planets','tourism_planets','supply_planets',
+            'gov_planets','edu_planets','research_planets','urban_planets',
+            'petro_planets','antipollu_planets'
+        ];
+        $count = 0;
+        foreach ($keys as $k) {
+            $count += isset($this->data[$k]) ? (int)$this->data[$k] : 0;
+        }
+        return $count;
+    }
 }
-
-
-?>

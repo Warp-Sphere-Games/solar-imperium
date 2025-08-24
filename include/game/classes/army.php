@@ -1,79 +1,93 @@
 <?php
-// Solar Imperium is licensed under GPL2, Check LICENSE.TXT for mode details //
-
+// Solar Imperium is licensed under GPL2, Check LICENSE.TXT for more details //
 
 class Army
 {
+    /** @var \ADOConnection|null */
+    var $DB;
+    var $TEMPLATE;
+    var $data = [];
+    var $data_footprint = '';
+    var $game_id = 0;
 
-	var $DB;
-	var $TEMPLATE;
-	var $data;
-	var $data_footprint;
-	var $game_id;
+    ///////////////////////////////////////////////////////////////////////
+    // Constructor
+    ///////////////////////////////////////////////////////////////////////
+    function __construct($DB = null, $TEMPLATE = null)
+    {
+        // Fallback to global DB if not injected
+        if ($DB === null) {
+            global $DB;
+            $this->DB = $DB;
+        } else {
+            $this->DB = $DB;
+        }
 
-	///////////////////////////////////////////////////////////////////////
-	//
-	///////////////////////////////////////////////////////////////////////
-	function Army($DB,$TEMPLATE)
-	{
-		$this->DB = $DB;
-		$this->TEMPLATE = $TEMPLATE;
-		$this->game_id = round($_SESSION["game"]);
-	}
+        $this->TEMPLATE = $TEMPLATE;
 
-	///////////////////////////////////////////////////////////////////////
-	//
-	///////////////////////////////////////////////////////////////////////
-	function load($empire_id)
-	{
-		$this->data = $this->DB->Execute("SELECT * FROM game".$this->game_id."_tb_army WHERE empire='".intval($empire_id)."'");	
-		if (!$this->data) trigger_error($this->DB->ErrorMsg());
+        // guard game id
+        $gid = isset($_SESSION['game']) ? (int)$_SESSION['game'] : 0;
+        $this->game_id = ($gid > 0) ? $gid : 0;
+    }
 
-		if ($this->data->EOF) return false;
-		$this->data = $this->data->fields;
+    // Back-compat for old-style construction Army($DB, $TEMPLATE)
+    function Army($DB = null, $TEMPLATE = null) { $this->__construct($DB, $TEMPLATE); }
 
-		if ($this->data["effectiveness"] < 10) $this->data["effectiveness"] = 10;
-		if ($this->data["effectiveness"] > 150) $this->data["effectiveness"] = 150;
+    ///////////////////////////////////////////////////////////////////////
+    // Load army row for an empire
+    ///////////////////////////////////////////////////////////////////////
+    function load($empire_id)
+    {
+        if (!$this->DB) { trigger_error('Army::$DB is not initialized', E_USER_ERROR); return false; }
+        if ($this->game_id <= 0) { trigger_error('Army::$game_id is not set', E_USER_ERROR); return false; }
 
+        $eid = (int)$empire_id;
+        $sql = "SELECT * FROM game{$this->game_id}_tb_army WHERE empire='{$eid}'";
+        $rs  = $this->DB->Execute($sql);
+        if (!$rs) trigger_error($this->DB->ErrorMsg(), E_USER_ERROR);
+        if ($rs->EOF) return false;
 
-		$this->data_footprint = md5(serialize($this->data));
+        $this->data = $rs->fields;
 
+        // Clamp effectiveness to sane bounds
+        if (isset($this->data['effectiveness'])) {
+            if ($this->data['effectiveness'] < 10)  $this->data['effectiveness'] = 10;
+            if ($this->data['effectiveness'] > 150) $this->data['effectiveness'] = 150;
+        }
 
-		return true;
-	}
+        $this->data_footprint = md5(serialize($this->data));
+        return true;
+    }
 
-	///////////////////////////////////////////////////////////////////////
-	//
-	///////////////////////////////////////////////////////////////////////
-	function save()
-	{
-		if (md5(serialize($this->data)) == $this->data_footprint) return;
+    ///////////////////////////////////////////////////////////////////////
+    // Save if changed
+    ///////////////////////////////////////////////////////////////////////
+    function save()
+    {
+        if (!$this->DB) { trigger_error('Army::$DB is not initialized', E_USER_ERROR); return; }
+        if ($this->game_id <= 0) { trigger_error('Army::$game_id is not set', E_USER_ERROR); return; }
+        if (!$this->data || md5(serialize($this->data)) === $this->data_footprint) return;
 
-		$query = "UPDATE game".$this->game_id."_tb_army SET ";
-		reset($this->data);
-		while (list($key,$value) = each($this->data))
-		{
-			if ($key == "id") continue;
-			if ($key == "empire") continue;
-			if (is_numeric($key)) continue;
-			if ((is_numeric($value)) && ($value < 0)) $value = 0;
+        $sets = [];
+        foreach ($this->data as $key => $value) {
+            if ($key === 'id' || $key === 'empire' || is_int($key)) continue;
 
-			if ((is_numeric($value)) && ($key != "logo"))
-				$query .= "$key=$value,";
-			else
-				$query .= "$key='".addslashes($value)."',";
-			
-		}
+            if (is_numeric($value) && $value < 0) $value = 0;
 
-		$query = substr($query,0,strlen($query)-1); // removing remaining ,
-		$query .= " WHERE empire='".$this->data["empire"]."'";
+            if (is_numeric($value) && $key !== 'logo') {
+                $sets[] = "$key=" . (0 + $value);
+            } else {
+                $sets[] = "$key='" . addslashes((string)$value) . "'";
+            }
+        }
 
-		if (!$this->DB->Execute($query)) trigger_error($this->DB->ErrorMsg());
+        if (!empty($sets)) {
+            $eid = (int)$this->data['empire'];
+            $sql = "UPDATE game{$this->game_id}_tb_army SET " . implode(',', $sets) . " WHERE empire='{$eid}'";
+            if (!$this->DB->Execute($sql)) trigger_error($this->DB->ErrorMsg(), E_USER_ERROR);
+        }
 
-	}
-
-
+        $this->data_footprint = md5(serialize($this->data));
+    }
 }
-
-
 ?>
